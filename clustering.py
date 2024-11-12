@@ -2,10 +2,14 @@ import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.datasets import fetch_covtype
+from sklearn.metrics import silhouette_score, calinski_harabasz_score
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 from itertools import combinations
+
+from sklearn.preprocessing import StandardScaler
+
 
 # Task 1
 def load_and_sample_data():
@@ -26,40 +30,29 @@ def load_and_sample_data():
 
 # Task 2
 def kmeans_clustering(X, n_clusters=7):
-    kmeans = KMeans(n_clusters=n_clusters, init='random', random_state=42).fit(X)
-    cluster_assignments = kmeans.predict(X)
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    kmeans = KMeans(n_clusters=n_clusters, init='random', random_state=42).fit(X_scaled)
+    cluster_assignments = kmeans.predict(X_scaled)
     centroid_locations = kmeans.cluster_centers_
-    return cluster_assignments, centroid_locations
+    return cluster_assignments, centroid_locations, X_scaled
 
 # Task 3
-def gmm_clustering(X, n_clusters=7):
-    #Error rate about 85%
-    # gmm = GaussianMixture(n_components=n_clusters, covariance_type = 'spherical',max_iter=2000, warm_start=True, init_params='random', tol=1e-8).fit(X)
-    #Error rate about 70%
+def gmm_clustering(X):
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
     gmm = GaussianMixture(
-        n_components=n_clusters,
-        covariance_type='full',
-        n_init=10,
-        max_iter=1500,
+        n_components=7,
+        covariance_type='diag',
+        n_init=20,
+        max_iter=2000,
         warm_start=False,
         tol=1e-4,
         init_params='random'
-    ).fit(X)
-
-    # gmm = BayesianGaussianMixture(
-    #     n_components=n_clusters,
-    #     covariance_type='full',
-    #     max_iter=1000,
-    #     n_init=10,
-    #     tol=1e-4,
-    #     init_params='random'
-    # ).fit(X)
-    #
-
-    cluster_assignments = gmm.predict(X)
+    ).fit(X_scaled)
+    cluster_assignments = gmm.predict(X_scaled)
     centroid_locations = gmm.means_
-
-    return cluster_assignments, centroid_locations
+    return cluster_assignments, centroid_locations, X_scaled
 
 # Task 4
 def random_baseline_clustering(n_samples, n_clusters=7):
@@ -109,15 +102,30 @@ def main():
     # Load data
     X, y = load_and_sample_data()
 
-    kmeans_assignments, kmeans_centroids = kmeans_clustering(X)
-    plot_clusters(X, kmeans_assignments, kmeans_centroids, "K-means Clustering")
+    # KMeans clustering
+    kmeans_assignments, kmeans_centroids, X_kmeans_scaled = kmeans_clustering(X)
+    plot_clusters(X_kmeans_scaled, kmeans_assignments, kmeans_centroids, "K-means Clustering")
 
-    gmm_assignments, gmm_centroids = gmm_clustering(X)
-    plot_clusters(X, gmm_assignments, gmm_centroids, "Gaussian Mixture Model Clustering")
+    # GMM clustering
+    gmm_assignments, gmm_centroids, X_gmm_scaled = gmm_clustering(X)
+    plot_clusters(X_gmm_scaled, gmm_assignments, gmm_centroids, "Gaussian Mixture Model Clustering")
 
+    # Random baseline
     random_labels = random_baseline_clustering(len(X))
     plot_random_baseline(X, random_labels, "Random Baseline Clustering")
 
+    # Clustering metrics
+    silhouette_kmeans = silhouette_score(X_kmeans_scaled, kmeans_assignments)
+    silhouette_gmm = silhouette_score(X_gmm_scaled, gmm_assignments)
+    print("Silhouette Score - KMeans: ", silhouette_kmeans)
+    print("Silhouette Score - GMM: ", silhouette_gmm)
+
+    calinski_harabasz_kmeans = calinski_harabasz_score(X_kmeans_scaled, kmeans_assignments)
+    calinski_harabasz_gmm = calinski_harabasz_score(X_gmm_scaled, gmm_assignments)
+    print("Calinski-Harabasz Score - KMeans: ", calinski_harabasz_kmeans)
+    print("Calinski-Harabasz Score - GMM: ", calinski_harabasz_gmm)
+
+    # Error rates
     kmeans_errors = count_clustering_errors(y, kmeans_assignments)
     gmm_errors = count_clustering_errors(y, gmm_assignments)
     random_errors = count_clustering_errors(y, random_labels)
@@ -126,7 +134,6 @@ def main():
     print("Error rate in K-means clustering:", kmeans_errors / same_labels * 100 , "%")
     print("Error rate in GMM clustering:", gmm_errors / same_labels * 100 , "%")
     print("Error rate in random baseline clustering:", random_errors / same_labels * 100 , "%")
-    # print("Number of same labels in clustering:", same_labels)
 
 if __name__ == "__main__":
     main()
