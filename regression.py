@@ -19,12 +19,25 @@ def load_data(filename):
     y_data = data[:, 1].reshape(-1, 1)  # y values
     return x_data, y_data
 
-
-# Code Task 10: Train a linear regression model
+#Code task 10: Train a linear regression model where the parameters are fit using maximum
+#              likelihood estimation (equivalently by minimising square error)
 def train_linear_regression(x_train, y_train):
-    linear_model = LinearRegression()
-    linear_model.fit(x_train, y_train)
-    return linear_model
+    x_train = np.c_[np.ones(x_train.shape[0]), x_train]
+    theta = np.linalg.inv(x_train.T.dot(x_train)).dot(x_train.T).dot(y_train)
+
+    intercept = theta[0]
+    coefficients = theta[1:]
+
+    model = LinearRegression()
+    model.intercept_ = intercept
+    model.coef_ = coefficients
+
+    print("Theta:", theta)
+    return model
+
+
+def predict(x, model):
+    return model.predict(x)
 
 
 # Code Task 11: Defining nn architecture
@@ -161,29 +174,41 @@ def main():
     x_test, y_test = load_data("Data/regression_test.txt")
 
     # Task 10: Train Linear Regression Model
-    linear_model = train_linear_regression(x_train, y_train)
+    model = train_linear_regression(x_train, y_train)
+    y_train_pred = predict(x_train, model)
+    y_test_pred = predict(x_test, model)
+
+    mse = np.mean((y_train - y_train_pred) ** 2)
+    mse_test = np.mean((y_test - y_test_pred) ** 2)
+
+    # mse_predict = np.mean((y_test - y_test_pred) ** 2)
+    print("Mean Squared Error on training set:", mse)
+    plot_results(x_train, y_train, y_train_pred, title ='Logistic Regression on Training set')
+    print("Mean Squared Error on testing set:", mse_test)
+    plot_results(x_test, y_test, y_test_pred, title ='Logistic Regression on Testing set')
+
 
     # Task 11: Train Neural Network Model
-    neural_network = train_neural_network(x_train, y_train)
+    # neural_network = train_neural_network(x_train, y_train)
 
     # Task 12: Bayesian Regression Model (we only need to train it, no prediction required on test set)
-    bayesian_trace = train_bayesian_model(x_train, y_train)
+    # bayesian_trace = train_bayesian_model(x_train, y_train)
 
     # Task 13: Evaluate models on test set
-    mse_linear, mse_nn, y_pred_linear_train, y_pred_nn_train = evaluate_models(linear_model, neural_network, x_train, y_train)
-    mse_linear_test, mse_nn_test, y_pred_linear_test, y_pred_nn_test = evaluate_models(linear_model, neural_network, x_test, y_test)
+    # mse_linear, mse_nn, y_pred_linear_train, y_pred_nn_train = evaluate_models(linear_model, neural_network, x_train, y_train)
+    # mse_linear_test, mse_nn_test, y_pred_linear_test, y_pred_nn_test = evaluate_models(linear_model, neural_network, x_test, y_test)
 
     # Plot for Linear Regression Model
-    plot_results(x_train, y_train, y_pred_linear_train, "Linear Regression", is_train=True)
-    plot_results(x_test, y_test, y_pred_linear_test, "Linear Regression", is_train=False)
+    # plot_results(x_train, y_train, y_pred_linear_train, "Linear Regression", is_train=True)
+    # plot_results(x_test, y_test, y_pred_linear_test, "Linear Regression", is_train=False)
 
     # Plot for Neural Network Model
-    plot_results(x_train, y_train, y_pred_nn_train, "Neural Network", is_train=True)
-    plot_results(x_test, y_test, y_pred_nn_test, "Neural Network", is_train=False)
+    # plot_results(x_train, y_train, y_pred_nn_train, "Neural Network", is_train=True)
+    # plot_results(x_test, y_test, y_pred_nn_test, "Neural Network", is_train=False)
 
     # Print results
-    print(f"Linear Regression MSE: {mse_linear}")
-    print(f"Neural Network MSE: {mse_nn}")
+    # print(f"Linear Regression MSE: {mse_linear}")
+    # print(f"Neural Network MSE: {mse_nn}")
 
 
 # Run main
