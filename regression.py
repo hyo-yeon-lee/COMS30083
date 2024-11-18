@@ -47,7 +47,6 @@ def train_neural_network(X, y, epochs=2000, learning_rate=0.01):
 
     class NeuralNetwork(nn.Module):
         def __init__(self):
-
             super(NeuralNetwork, self).__init__()
             self.fc1 = nn.Linear(1, 64)
             self.fc2 = nn.Linear(64, 32)

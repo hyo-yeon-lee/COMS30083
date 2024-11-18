@@ -21,13 +21,8 @@ subset_indices = np.random.choice(X_orig.shape[0], size=10000, replace=False)
 X_subset = X_orig[subset_indices]
 y_subset = y[subset_indices]
 
-# Apply PCA for 2D visualization
-# pca = PCA(n_components=2)
-# X_reduced = pca.fit_transform(X_subset)
-
-# Apply standard scaling to the data
 scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X_subset)  # Corrected to apply scaling
+X_scaled = scaler.fit_transform(X_subset)
 
 
 def plot_clusters(X, cluster_assignments, centroids, title):
@@ -39,10 +34,10 @@ def plot_clusters(X, cluster_assignments, centroids, title):
 
 
 def kmeans_clustering(X, K=7):
-    kmeans = KMeans(K, init='random').fit(X)
-    cluster_assignments = kmeans.predict(X)
-    # centroids = pca.transform(kmeans.cluster_centers_)
-    plot_clusters(X_subset, cluster_assignments, kmeans.cluster_centers_, 'K-means Clustering')
+    initial_centroids = np.random.rand(7, 54)
+    model = KMeans(K, init='random').fit(X)
+    cluster_assignments = model.predict(X)
+    plot_clusters(X_subset, cluster_assignments, model.cluster_centers_, 'K-means Clustering')
     return cluster_assignments
 
 
@@ -54,20 +49,11 @@ def gmm_clustering(X, K=7):
     return cluster_assignments, gmm
 
 
-# def random_baseline_clustering(X, K=7):
-#     random_assignments = np.random.choice(K, size=X.shape[0], replace=True)
-#     random_centroids = np.random.rand(K, 2) * np.ptp(X, axis=0) + np.min(X, axis=0)
-#     plot_clusters(X_subset, random_assignments, random_centroids, 'Random Baseline Clustering')
-#     return random_assignments
-
 def random_baseline_clustering(X, K=7):
-    # Generate random centroids in the original feature space
     random_centroids = np.random.rand(K, X.shape[1]) * np.ptp(X, axis=0) + np.min(X, axis=0)
 
-    # Assign random cluster labels
     random_assignments = np.random.choice(K, size=X.shape[0], replace=True)
 
-    # Plot only the first two features for visualization
     plt.figure(figsize=(8, 8))
     plt.scatter(X[:, 0], X[:, 1], s=20, c=random_assignments, cmap='viridis', alpha=0.8)
     plt.scatter(random_centroids[:, 0], random_centroids[:, 1], s=200, marker='X', c='red', edgecolors='k')
