@@ -248,6 +248,7 @@ def descale(X_train, y_train, y_pred):
     y_train_pred_orig = y_scaler.inverse_transform(y_pred)
     return X_train_orig, y_train_orig, y_train_pred_orig
 
+
 # Main function to execute all tasks
 def main():
     # Load and scale data
@@ -264,8 +265,7 @@ def main():
     y_test_pred_lreg = linear_model.predict(X_test)
 
     # Train Neural Network
-    nn_model, _ = train_neural_network(X_train, y_train, hidden_layer_sizes=[64, 32], epochs=500, learning_rate=0.001)
-
+    nn_model, _ = train_neural_network(X_train, y_train, hidden_layer_sizes=[64, 32], epochs=280, learning_rate=0.05)
     # Get predictions from the neural network model
     with torch.no_grad():
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32)

@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 from sklearn.datasets import fetch_covtype
 from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
@@ -70,6 +70,40 @@ def predict_ensemble(model, X, y):
    return y_pred, train_acc
 
 
+
+def evaluate_c_values(X_train, y_train, C_values):
+    train_accuracies = []
+    cv_accuracies = []
+
+    for C in C_values:
+        model = LogisticRegression(random_state=42, C=C, max_iter=500, solver='newton-cg', verbose=0)
+        model.fit(X_train, y_train)
+        # Training accuracy
+        train_accuracy = model.score(X_train, y_train)
+        train_accuracies.append(train_accuracy)
+        # Cross-validation accuracy
+        cv_accuracy = np.mean(cross_val_score(model, X_train, y_train, cv=5, scoring='accuracy'))
+        cv_accuracies.append(cv_accuracy)
+
+    return train_accuracies, cv_accuracies
+
+def plot_c_accuracies(X_train, y_train):
+    # Define the range of C values
+    C_values = np.linspace(0.01, 0.5, 50)
+    train_accuracies, cv_accuracies = evaluate_c_values(X_train, y_train, C_values)
+
+    # Plot results
+    plt.figure(figsize=(10, 6))
+    plt.plot(C_values, train_accuracies, label='Training Accuracy', marker='o')
+    plt.plot(C_values, cv_accuracies, label='Cross-Validation Accuracy', marker='x')
+    plt.xlabel('C Value (Regularization Strength)')
+    plt.ylabel('Accuracy')
+    plt.title('Training vs Cross-Validation Accuracy for Logistic Regression')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
 def evaluate_train_model(model, X_train, y_train):
     print("Received model and train data...")
     train_accuracy = round(model.score(X_train,  y_train), 4)
@@ -78,6 +112,7 @@ def evaluate_train_model(model, X_train, y_train):
     # plot_performance(model, X_train, y_train)
 
     return train_accuracy
+
 
 
 
@@ -105,29 +140,30 @@ from sklearn.metrics import log_loss
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plot_tree_losses(forest_model, X, y, loss_type='log_loss'):
+def plot_tree_losses(forest_model, X, y, loss_type='accuracy_loss'):
     tree_losses = []
     for i, tree in enumerate(forest_model.estimators_):
-        y_pred = tree.predict_proba(X)
-        if loss_type == 'log_loss':
-            loss = log_loss(y, y_pred, labels=forest_model.classes_)
+        y_pred = tree.predict(X)  # Predictions from individual tree
+        if loss_type == 'accuracy_loss':
+            loss = 1 - accuracy_score(y, y_pred)  # Misclassification rate
         else:
-            loss = 1 - tree.score(X, y)  # Misclassification rate
+            raise ValueError("Unsupported loss type")
         tree_losses.append(loss)
 
     # Calculate overall Random Forest loss
-    y_pred_forest = forest_model.predict_proba(X)
-    overall_loss = log_loss(y, y_pred_forest, labels=forest_model.classes_) if loss_type == 'log_loss' else 1 - forest_model.score(X, y)
+    y_pred_forest = forest_model.predict(X)
+    overall_loss = 1 - accuracy_score(y, y_pred_forest)  # Misclassification rate for the ensemble
 
     # Plot
     plt.figure(figsize=(12, 6))
     plt.bar(range(len(tree_losses)), tree_losses, alpha=0.7, label='Individual Trees')
     plt.axhline(y=overall_loss, color='r', linestyle='--', label='Random Forest Overall Loss')
     plt.xlabel('Tree Index')
-    plt.ylabel('Loss')
-    plt.title(f'Loss of Each Decision Tree vs Random Forest ({loss_type})')
+    plt.ylabel('Loss (Misclassification Rate)')
+    plt.title('Loss of Each Decision Tree vs Random Forest (Misclassification Rate)')
     plt.legend()
     plt.show()
+
 
 
 
@@ -140,14 +176,15 @@ def main():
     # log_train = evaluate_train_model(logistic_model, X_train, y_train)
     # print("Logistic Regression Train Set: ", log_train)
 
+
     # Task 8
     # tree_model = train_decision_tree(X_train, y_train)
     # tree_train = evaluate_train_model(tree_model, X_train, y_train)
     # print("Tree Model Train Set: ", tree_train)
 
     # Task 9
-    ensemble_model = random_search_forest(X_train, y_train)
-    ens_train = evaluate_train_model(ensemble_model, X_train, y_train)
+    # ensemble_model = random_search_forest(X_train, y_train)
+    # ens_train = evaluate_train_model(ensemble_model, X_train, y_train)
 
     #Testing set
     # log_test = evaluate_test_model(logistic_model, X_test, y_test)
@@ -155,13 +192,13 @@ def main():
     # tree_test = evaluate_test_model(tree_model,X_test, y_test)
     # print(" Test Set Accuracy:", tree_test)
 
-    ens_train = evaluate_test_model(ensemble_model, X_train, y_train)
-    ens_test = evaluate_test_model(ensemble_model, X_test, y_test)
-    print("Ensemble Model Test Set Accuracy:", ens_test)
-
+    # ens_train = evaluate_test_model(ensemble_model, X_train, y_train)
+    # ens_test = evaluate_test_model(ensemble_model, X_test, y_test)
+    # print("Ensemble Model Test Set Accuracy:", ens_test)
+    plot_c_accuracies(X_train, y_train)
     # Plot losses
-    plot_tree_losses(ensemble_model, X_train, y_train, loss_type='log_loss')
-    plot_tree_losses(ensemble_model, X_test, X_test, loss_type='log_loss')
+    # plot_tree_losses(ensemble_model, X_train, y_train, loss_type='accuracy_loss')
+    # plot_tree_losses(ensemble_model, X_test, y_test, loss_type='accuracy_loss')
     # ens_test = evaluate_test_model(ensemble_model, X_test, y_test)
     # print("Ensemble Model Train Set: ", ens_train, " Test Set Accuracy:", ens_test)
 

@@ -5,7 +5,6 @@ from sklearn.mixture import GaussianMixture
 from sklearn.datasets import fetch_covtype
 from itertools import combinations
 from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import normalize
 
 # Load data
 np.random.seed(42)
@@ -13,16 +12,12 @@ data = fetch_covtype()
 X_orig = data.data
 y = data.target
 
-# Sample subset of data
 subset_indices = np.random.choice(X_orig.shape[0], size=10000, replace=False)
 X_subset = X_orig[subset_indices]
 y_subset = y[subset_indices]
 
-# Apply standard scaling to the data
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X_subset)
-
-# def load_data():
 
 
 
@@ -93,10 +88,10 @@ def main():
     gmm_errors, _ = count_errors(gmm_assignments, y_subset)
     random_errors, _ = count_errors(random_assignments, y_subset)
 
-    print("Total number of pairs with the same label:", total_pairs)
-    print("K-means errors:", kmeans_errors, "Error rate:", kmeans_errors / total_pairs * 100)
-    print("GMM errors:", gmm_errors, "Error rate:", gmm_errors / total_pairs * 100)
-    print("Random baseline errors:", random_errors, "Error rate:", random_errors / total_pairs * 100)
+    # print("Total number of pairs with the same label:", total_pairs)
+    # print("K-means errors:", kmeans_errors, "Error rate:", kmeans_errors / total_pairs * 100)
+    # print("GMM errors:", gmm_errors, "Error rate:", gmm_errors / total_pairs * 100)
+    # print("Random baseline errors:", random_errors, "Error rate:", random_errors / total_pairs * 100)
 
     # Print results
     print("Total number of pairs with the same class label:", total_pairs)
