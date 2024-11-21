@@ -63,6 +63,43 @@ def random_search_forest(X_train, y_train):
     return model
 
 
+def plot_forest_loss_vs_trees(X_train, y_train, X_test, y_test, tree_counts):
+    train_losses = []
+    test_losses = []
+
+    for n_trees in tree_counts:
+        # Train a Random Forest with the current number of trees
+        forest_model = RandomForestClassifier(
+            random_state=42,
+            n_estimators=n_trees,
+            min_samples_leaf=3,
+            min_samples_split=5,
+            max_features=None,
+            max_depth=22,
+            bootstrap=True
+        )
+        forest_model.fit(X_train, y_train)
+
+        # Calculate misclassification loss for training and testing sets
+        train_loss = 1 - accuracy_score(y_train, forest_model.predict(X_train))
+        test_loss = 1 - accuracy_score(y_test, forest_model.predict(X_test))
+
+        train_losses.append(train_loss)
+        test_losses.append(test_loss)
+
+    # Plot losses
+    plt.figure(figsize=(12, 6))
+    plt.plot(tree_counts, train_losses, label='Training Loss', marker='o')
+    # plt.plot(tree_counts, test_losses, label='Testing Loss', marker='x')
+    plt.xlabel('Number of Trees')
+    plt.ylabel('Loss (Misclassification Rate)')
+    plt.title('Loss vs Number of Trees in Random Forest')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
+
 def predict_ensemble(model, X, y):
    y_pred = model.predict(X)
    train_acc = accuracy_score(y, y_pred)
@@ -112,8 +149,6 @@ def evaluate_train_model(model, X_train, y_train):
     # plot_performance(model, X_train, y_train)
 
     return train_accuracy
-
-
 
 
 def evaluate_test_model(model, X_test, y_test):
@@ -195,8 +230,11 @@ def main():
     # ens_train = evaluate_test_model(ensemble_model, X_train, y_train)
     # ens_test = evaluate_test_model(ensemble_model, X_test, y_test)
     # print("Ensemble Model Test Set Accuracy:", ens_test)
-    plot_c_accuracies(X_train, y_train)
+    # plot_c_accuracies(X_train, y_train)
     # Plot losses
+    tree_counts = range(10, 201, 10)  # Number of trees to iterate over
+    plot_forest_loss_vs_trees(X_train, y_train, X_test, y_test, tree_counts)
+
     # plot_tree_losses(ensemble_model, X_train, y_train, loss_type='accuracy_loss')
     # plot_tree_losses(ensemble_model, X_test, y_test, loss_type='accuracy_loss')
     # ens_test = evaluate_test_model(ensemble_model, X_test, y_test)
