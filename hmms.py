@@ -55,7 +55,7 @@ def train_hmm_without_transitions(rewards_data):
     print("emission prior probability: " , model.emissionprob_prior)
 
     print(model.emissionprob_)
-    visualize_transition_matrix(model.transmat_, "WITHOUT EM Transition Matrix (Task 14)")
+    visualize_transition_matrix(model.transmat_, "True Transition Matrix Not Probided")
     return model.emissionprob_
 
 # Code Task 15: EM Algorithm with Known Transition Probabilities
@@ -68,7 +68,7 @@ def train_hmm_with_transitions(rewards_data, true_transmat):
     model.fit(rewards_data)
     print("Learned Emission Matrix (Task 15):")
     print(model.emissionprob_)
-    visualize_transition_matrix(model.transmat_, "WITH EM Transition Matrix (Task 15)")
+    visualize_transition_matrix(model.transmat_, "True Transition Matrix Provided")
     print("------------------------------------WITH------------------------------------")
     print("Learned Emission Matrix (Task 14):")
     print("Initial probabilities: ", model.startprob_)
@@ -83,6 +83,6 @@ without_prob = train_hmm_without_transitions(rewards_data)
 with_prob = train_hmm_with_transitions(rewards_data, true_transmat)
 
 print("MSE: ", mean_squared_error(with_prob, without_prob))
-visualize_transition_matrix(true_transmat, "True transition Matrix (Task 15)")
+visualize_transition_matrix(true_transmat, "True transition Matrix")
 
 

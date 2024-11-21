@@ -7,7 +7,7 @@ import arviz as az
 import pymc as pm
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold, train_test_split
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 
@@ -15,8 +15,8 @@ import matplotlib.pyplot as plt
 torch.manual_seed(0)
 np.random.seed(0)
 # Initialise scalers outside any function to ensure consistency
-x_scaler = MinMaxScaler()
-y_scaler = MinMaxScaler()
+x_scaler = StandardScaler()
+y_scaler = StandardScaler()
 
 def load_data(file_name):
     data = np.loadtxt(file_name)
@@ -56,7 +56,7 @@ def train_linear_regression(X_train, y_train):
 
 
 # Neural network architecture and training function
-def train_neural_network(X, y, hidden_layer_sizes=[8, 8], epochs=40, learning_rate=0.05):
+def train_neural_network(X, y, hidden_layer_sizes=[64, 32], epochs=40, learning_rate=0.01):
     X_tensor = torch.tensor(X, dtype=torch.float32).view(-1, 1)
     y_tensor = torch.tensor(y, dtype=torch.float32).view(-1, 1)
 
@@ -82,73 +82,67 @@ def train_neural_network(X, y, hidden_layer_sizes=[8, 8], epochs=40, learning_ra
     loss_values = []
 
     # Train the model
+    # for epoch in range(epochs):
+    #     optimizer.zero_grad()
+    #     outputs = model(X_tensor)
+    #
+    #     loss = criterion(outputs, y_tensor)
+    #     loss.backward()
+    #     optimizer.step()
+    #     scheduler.step()
+    #
+    #     print(f"{epoch}: Initial Weights (before training):")
+    #     print("fc1 weights:\n", model.fc1.weight.detach().numpy())
+    #     print("fc2 weights:\n", model.fc2.weight.detach().numpy())
+    #     print("fc3 weights:\n", model.fc3.weight.detach().numpy())
+    #
+    #     if epoch % 10 == 0:  # print every 10th epoch
+    #         print(f"Epoch {epoch}, Loss: {loss.item()}, Learning Rate: {scheduler.get_last_lr()}")
+    #
+    #     loss_values.append(loss.item())
+
     for epoch in range(epochs):
         optimizer.zero_grad()
         outputs = model(X_tensor)
 
         loss = criterion(outputs, y_tensor)
         loss.backward()
+
+        # Plot gradient flow
+        # if epoch % 10 == 0:  # Plot every 10 epochs
+        #     plot_grad_flow(model, epoch)
+
         optimizer.step()
         scheduler.step()
 
-        print(f"{epoch}: Initial Weights (before training):")
-        print("fc1 weights:\n", model.fc1.weight.detach().numpy())
-        print("fc2 weights:\n", model.fc2.weight.detach().numpy())
-        print("fc3 weights:\n", model.fc3.weight.detach().numpy())
-
-        if epoch % 10 == 0:  # print every 10th epoch
-            print(f"Epoch {epoch}, Loss: {loss.item()}, Learning Rate: {scheduler.get_last_lr()}")
+        # if epoch % 10 == 0:
+            # print(f"Epoch {epoch}, Loss: {loss.item()}, Learning Rate: {scheduler.get_last_lr()}")
 
         loss_values.append(loss.item())
-
     return model, loss_values
 
 
+def plot_grad_flow(model, epoch):
+    """
+    Plots the gradients flowing through different layers in the model during training.
+    """
+    avg_grads = []
+    layers = []
 
-def train_with_validation_loss(X_train, y_train, X_val, y_val, hidden_layer_sizes=[8, 8], epochs=40, learning_rate=0.05):
-    X_train_tensor = torch.tensor(X_train, dtype=torch.float32).view(-1, 1)
-    y_train_tensor = torch.tensor(y_train, dtype=torch.float32).view(-1, 1)
-    X_val_tensor = torch.tensor(X_val, dtype=torch.float32).view(-1, 1)
-    y_val_tensor = torch.tensor(y_val, dtype=torch.float32).view(-1, 1)
+    for name, param in model.named_parameters():
+        if param.requires_grad and param.grad is not None:
+            layers.append(name)
+            avg_grads.append(param.grad.abs().mean().item())
 
-    class NeuralNetwork(nn.Module):
-        def __init__(self, hidden_layer_sizes):
-            super(NeuralNetwork, self).__init__()
-            self.fc1 = nn.Linear(1, hidden_layer_sizes[0])
-            self.fc2 = nn.Linear(hidden_layer_sizes[0], hidden_layer_sizes[1])
-            self.fc3 = nn.Linear(hidden_layer_sizes[1], 1)
+    plt.figure(figsize=(10, 6))
+    plt.barh(layers, avg_grads, color="b", alpha=0.6)
+    plt.xlabel("Average Gradient Magnitude", fontsize=14)
+    plt.ylabel("Layers", fontsize=14)
+    plt.title(f"Gradient Flow at Epoch {epoch}", fontsize=16)
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
-        def forward(self, x):
-            x = torch.relu(self.fc1(x))
-            x = torch.relu(self.fc2(x))
-            return self.fc3(x)
-
-    model = NeuralNetwork(hidden_layer_sizes)
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-
-    train_loss_values = []
-    val_loss_values = []
-
-    for epoch in range(epochs):
-        optimizer.zero_grad()
-        outputs = model(X_train_tensor)
-        train_loss = criterion(outputs, y_train_tensor)
-        train_loss.backward()
-        optimizer.step()
-
-        # Calculate validation loss
-        with torch.no_grad():
-            val_outputs = model(X_val_tensor)
-            val_loss = criterion(val_outputs, y_val_tensor)
-
-        train_loss_values.append(train_loss.item())
-        val_loss_values.append(val_loss.item())
-
-        if epoch % 10 == 0:
-            print(f"Epoch {epoch}, Train Loss: {train_loss.item()}, Val Loss: {val_loss.item()}")
-
-    return model, train_loss_values, val_loss_values
 
 
 # Code Task 12: Bayesian regression model using PyMC
@@ -156,9 +150,9 @@ def train_bayesian_model(x_train, y_train):
     y_train = y_train.flatten()  # Ensure proper shape for observed data
     with pm.Model() as model:
         # Define priors
-        slope = pm.Normal('Slope', mu=0, sigma=10)
-        intercept = pm.Normal('Intercept', mu=0, sigma=10)
-        sigma = pm.HalfNormal('Sigma', sigma=1)
+        slope = pm.Normal('Slope', mu=0, sigma=100)
+        intercept = pm.Normal('Intercept', mu=0, sigma=500)
+        sigma = pm.HalfNormal('Sigma', sigma=100)
 
         # Define likelihood
         mean = intercept + slope * x_train.flatten()
@@ -171,58 +165,7 @@ def train_bayesian_model(x_train, y_train):
 
 
 
-# def bayesian_regression(X, y, num_samples=1000):
-#     """Perform Bayesian regression using PyMC."""
-#     model = pm.Model()
-#
-#     with model:
-#         # Defining our priors
-#         w0 = pm.Normal('w0', mu=0, sigma=20)
-#         w1 = pm.Normal('w1', mu=0, sigma=20)
-#         sigma = pm.HalfNormal('sigma', sigma=100)
-#
-#         y_est = w0 + w1 * X  # auxiliary variables
-#
-#         likelihood = pm.Normal('y', mu=y_est, sigma=sigma, observed=y)
-#
-#         # inference
-#         sampler = pm.NUTS()  # Hamiltonian MCMC with No U-Turn Sampler
-#
-#         idata = pm.sample(num_samples, step=sampler, tune=2000, progressbar=True)
-#         return idata
-
-
 # # Training function
-# def train_neural_network_plot(X_train, y_train, hidden_layer_configs, epochs=100, learning_rate=0.01):
-#     # Initialize a list to store the loss values for each hidden layer configuration
-#     loss_values_all_configs = []
-#
-#     # Iterate over different hidden layer configurations
-#     for hidden_layers in hidden_layer_configs:
-#         print(f"Training model with hidden layers: {hidden_layers}")
-#
-#         # Train the neural network with the current hidden layer configuration
-#         model, loss_values = train_neural_network(X_train, y_train, hidden_layer_sizes=hidden_layers, epochs=epochs,
-#                                                   learning_rate=learning_rate)
-#
-#         # Store the loss values for this configuration
-#         loss_values_all_configs.append((hidden_layers, loss_values))
-#
-#     # Plot the results for different hidden layer configurations
-#     plt.figure(figsize=(10, 8))
-#     for hidden_layers, loss_values in loss_values_all_configs:
-#         label = f"Training Loss {hidden_layers}"
-#         plt.plot(range(epochs), loss_values, label=label)
-#
-#     # Add title and labels to the plot
-#     plt.xlabel('Epochs', fontsize=14)
-#     plt.ylabel('Training Loss (MSE)', fontsize=14)
-#     plt.title('Training Loss Curves for Different Hidden Layer Configurations', fontsize=16)
-#     plt.legend()
-#     plt.show()
-#
-#
-# ##
 #
 # def train_with_learning_rates(X_train, y_train, learning_rates, epochs=500):
 #     # Store training loss values for each learning rate
@@ -241,38 +184,6 @@ def train_bayesian_model(x_train, y_train):
 #     return train_loss_list
 #
 #
-# def train_with_kfold_cv(X, y, learning_rates, epochs=100, n_splits=5):
-#     kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)  # Initialize KFold
-#     cv_loss_list = []
-#
-#     for lr in learning_rates:
-#         fold_val_losses = []
-#
-#         for train_index, val_index in kf.split(X):
-#             X_train, X_val = X[train_index], X[val_index]
-#             y_train, y_val = y[train_index], y[val_index]
-#
-#             # Train the neural network on the current fold
-#             nn_model, _ = train_neural_network(X_train, y_train, hidden_layer_sizes=[64, 32],
-#                                                epochs=epochs, learning_rate=lr)
-#
-#             # Predictions for the validation set
-#             with torch.no_grad():
-#                 X_val_tensor = torch.tensor(X_val, dtype=torch.float32)
-#                 y_val_pred_nn = nn_model(X_val_tensor).numpy()
-#
-#             # Inverse transform predictions and calculate MSE for validation set
-#             X_val_orig = x_scaler.inverse_transform(X_val)
-#             y_val_orig = y_scaler.inverse_transform(y_val)
-#             y_val_pred_orig_nn = y_scaler.inverse_transform(y_val_pred_nn)
-#
-#             mse_val_nn = mean_squared_error(y_val_orig, y_val_pred_orig_nn)
-#             fold_val_losses.append(mse_val_nn)
-#
-#         # Calculate the average cross-validation loss for this learning rate
-#         cv_loss_list.append(np.mean(fold_val_losses))
-#
-#     return cv_loss_list
 
 
 # def plot_loss_comparison(learning_rates, train_loss_list, cv_loss_list):
@@ -296,7 +207,7 @@ def train_bayesian_model(x_train, y_train):
 
 
 # Plotting function for multiple hidden layer configurations
-def plot_loss_curves(hidden_layer_configs, X_train, y_train, epochs=50, learning_rate=0.01):
+def plot_loss_curves(hidden_layer_configs, X_train, y_train, epochs=150, learning_rate=0.01):
     plt.figure(figsize=(10, 8))
     for hidden_layers in hidden_layer_configs:
         _, loss_values = train_neural_network(X_train, y_train, hidden_layers, epochs, learning_rate)
@@ -397,7 +308,10 @@ def main():
     test_lin_reg(linear_model, X_train, y_train, X_test, y_test)
 
     # Train Neural Network
-    nn_model, nn_loss = train_neural_network(X_train, y_train, hidden_layer_sizes=[64, 32], epochs=280, learning_rate=0.05)
+    nn_model, nn_loss = train_neural_network(X_train, y_train, hidden_layer_sizes=[64, 32], epochs=70, learning_rate=0.05)
+    hidden_layer_configs = [[8, 8], [16, 8], [32, 16], [64, 32], [128, 64]]  # Example configurations
+    plot_loss_curves(hidden_layer_configs, X_train, y_train, epochs=200, learning_rate=0.01)
+
     test_nn(nn_model, X_train, y_train, X_test, y_test)
 
     # Perform Bayesian Regression

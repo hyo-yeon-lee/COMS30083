@@ -6,6 +6,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 # Task 6
@@ -61,6 +63,7 @@ def random_search_forest(X_train, y_train):
                                       bootstrap=True)
     model.fit(X_train, y_train)
     return model
+
 
 
 def plot_forest_loss_vs_trees(X_train, y_train, X_test, y_test, tree_counts):
@@ -172,8 +175,7 @@ def plot_performance(model, X, y):
 
 
 from sklearn.metrics import log_loss
-import matplotlib.pyplot as plt
-import numpy as np
+
 
 def plot_tree_losses(forest_model, X, y, loss_type='accuracy_loss'):
     tree_losses = []
@@ -232,8 +234,8 @@ def main():
     # print("Ensemble Model Test Set Accuracy:", ens_test)
     # plot_c_accuracies(X_train, y_train)
     # Plot losses
-    tree_counts = range(10, 201, 10)  # Number of trees to iterate over
-    plot_forest_loss_vs_trees(X_train, y_train, X_test, y_test, tree_counts)
+    # tree_counts = range(10, 201, 10)  # Number of trees to iterate over
+    # plot_forest_loss_vs_trees(X_train, y_train, X_test, y_test, tree_counts)
 
     # plot_tree_losses(ensemble_model, X_train, y_train, loss_type='accuracy_loss')
     # plot_tree_losses(ensemble_model, X_test, y_test, loss_type='accuracy_loss')
