@@ -10,7 +10,7 @@ from sklearn.model_selection import KFold, train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
-
+# from theano.compile import shape
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -22,6 +22,7 @@ def load_data(file_name):
     data = np.loadtxt(file_name)
     x_data = data[:, 0].reshape(-1, 1)  # x values
     y_data = data[:, 1].reshape(-1, 1)  # y values
+
     return x_data, y_data
 
 
@@ -42,65 +43,35 @@ def descale(X_train, y_train, y_pred):
 
 # Linear regression model training function
 def train_linear_regression(X_train, y_train):
-    # X_train = np.c_[np.ones(X_train.shape[0]), X_train]
-    # theta = np.linalg.inv(X_train.T.dot(X_train)).dot(X_train.T).dot(y_train)
-    # intercept = theta[0]
-    # coefficients = theta[1:]
-
     model = LinearRegression().fit(X_train, y_train)
-    # model.intercept_ = intercept
-    # model.coef_ = coefficients
 
-    # print("Theta:", theta)
     return model
 
 
-# Neural network architecture and training function
-def train_neural_network(X, y, hidden_layer_sizes=[64, 32], epochs=40, learning_rate=0.01):
+def train_neural_network(X, y, hidden_layer_sizes=[32, 16], epochs=90, learning_rate=0.018, weight_decay=1e-4, clip_value=1.0):
     X_tensor = torch.tensor(X, dtype=torch.float32).view(-1, 1)
     y_tensor = torch.tensor(y, dtype=torch.float32).view(-1, 1)
 
-    # Define the neural network model
     class NeuralNetwork(nn.Module):
         def __init__(self, hidden_layer_sizes):
             super(NeuralNetwork, self).__init__()
             self.fc1 = nn.Linear(1, hidden_layer_sizes[0])
             self.fc2 = nn.Linear(hidden_layer_sizes[0], hidden_layer_sizes[1])
-            self.fc3 = nn.Linear(hidden_layer_sizes[1],1)
+            self.fc3 = nn.Linear(hidden_layer_sizes[1], 1)
 
         def forward(self, x):
             x = torch.relu(self.fc1(x))
             x = torch.relu(self.fc2(x))
-            # x = torch.relu(self.fc3(x))
             return self.fc3(x)
 
     model = NeuralNetwork(hidden_layer_sizes)
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.5)
 
     loss_values = []
 
     # Train the model
-    # for epoch in range(epochs):
-    #     optimizer.zero_grad()
-    #     outputs = model(X_tensor)
-    #
-    #     loss = criterion(outputs, y_tensor)
-    #     loss.backward()
-    #     optimizer.step()
-    #     scheduler.step()
-    #
-    #     print(f"{epoch}: Initial Weights (before training):")
-    #     print("fc1 weights:\n", model.fc1.weight.detach().numpy())
-    #     print("fc2 weights:\n", model.fc2.weight.detach().numpy())
-    #     print("fc3 weights:\n", model.fc3.weight.detach().numpy())
-    #
-    #     if epoch % 10 == 0:  # print every 10th epoch
-    #         print(f"Epoch {epoch}, Loss: {loss.item()}, Learning Rate: {scheduler.get_last_lr()}")
-    #
-    #     loss_values.append(loss.item())
-
     for epoch in range(epochs):
         optimizer.zero_grad()
         outputs = model(X_tensor)
@@ -108,24 +79,21 @@ def train_neural_network(X, y, hidden_layer_sizes=[64, 32], epochs=40, learning_
         loss = criterion(outputs, y_tensor)
         loss.backward()
 
-        # Plot gradient flow
-        # if epoch % 10 == 0:  # Plot every 10 epochs
-        #     plot_grad_flow(model, epoch)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=clip_value)
 
         optimizer.step()
         scheduler.step()
 
-        # if epoch % 10 == 0:
-            # print(f"Epoch {epoch}, Loss: {loss.item()}, Learning Rate: {scheduler.get_last_lr()}")
+        if epoch % 10 == 0:
+            print(f"Epoch {epoch}, Loss: {loss.item()}, Learning Rate: {scheduler.get_last_lr()}")
 
         loss_values.append(loss.item())
+
     return model, loss_values
 
 
+
 def plot_grad_flow(model, epoch):
-    """
-    Plots the gradients flowing through different layers in the model during training.
-    """
     avg_grads = []
     layers = []
 
@@ -144,108 +112,85 @@ def plot_grad_flow(model, epoch):
     plt.show()
 
 
-
-# Code Task 12: Bayesian regression model using PyMC
-def train_bayesian_model(x_train, y_train):
-    y_train = y_train.flatten()  # Ensure proper shape for observed data
+def train_bayesian_regression(X_train, y_train, y_scaler, num_samples=1000):
     with pm.Model() as model:
-        # Define priors
-        slope = pm.Normal('Slope', mu=0, sigma=100)
-        intercept = pm.Normal('Intercept', mu=0, sigma=500)
-        sigma = pm.HalfNormal('Sigma', sigma=100)
+        intercept = pm.Normal("intercept", mu=0, sigma=10)
+        slope = pm.Normal("slope", mu=0, sigma=10)
+        slope_quadratic = pm.Normal("slope_quadratic", mu=0, sigma=10)  # Quadratic term
+        noise = pm.Uniform("noise", lower=0, upper=200)
 
-        # Define likelihood
-        mean = intercept + slope * x_train.flatten()
-        y_obs = pm.Normal('Y_obs', mu=mean, sigma=sigma, observed=y_train)
+        y_est = intercept + slope * X_train + slope_quadratic * X_train**2
+        y_obs = pm.Normal("y_obs", mu=y_est, sigma=noise, observed=y_train)
 
-        # Sample posterior
-        trace = pm.sample(1000, tune=1000, chains=4, cores=4, return_inferencedata=True)
+        trace = pm.sample(2000, tune=1000, return_inferencedata=True)
+
+    # Plot posterior distributions
+    pm.plot_posterior(trace, var_names=["intercept", "slope", "slope_quadratic", "noise"])
+    plt.show()
+
+    summary = az.summary(trace, var_names=["intercept", "slope", "slope_quadratic", "noise"])
+    print(summary)
+
     return model, trace
 
 
 
 
-# # Training function
-#
-# def train_with_learning_rates(X_train, y_train, learning_rates, epochs=500):
-#     # Store training loss values for each learning rate
-#     train_loss_list = []
-#
-#     for lr in learning_rates:
-#         # Train the model with the current learning rate
-#         nn_model, loss_values = train_neural_network(X_train, y_train, hidden_layer_sizes=[64, 32],
-#                                                      epochs=epochs, learning_rate=lr)
-#
-#         # Calculate the training loss (last value from the loss_values)
-#         train_loss = loss_values[-1]
-#         print(f"{lr}: ")
-#         train_loss_list.append(train_loss)
-#
-#     return train_loss_list
-#
-#
+
+def train_with_learning_rates(X_train, y_train, learning_rates, epochs=90):
+    train_loss_list = []
+
+    for lr in learning_rates:
+        # Train the model with the current learning rate
+        nn_model, loss_values = train_neural_network(X_train, y_train, hidden_layer_sizes=[32, 16],
+                                                     epochs=epochs, learning_rate=lr)
+
+        # Calculate the training loss (last value from the loss_values)
+        train_loss = loss_values[-1]
+        print(f"{lr}: ")
+        train_loss_list.append(train_loss)
+
+    return train_loss_list
 
 
-# def plot_loss_comparison(learning_rates, train_loss_list, cv_loss_list):
-#     plt.figure(figsize=(10, 8))
-#
-#     # Plot training loss
-#     plt.plot(learning_rates, train_loss_list, label='Training Loss', marker='o', linestyle='-', color='blue')
-#
-#     # Plot cross-validation loss
-#     plt.plot(learning_rates, cv_loss_list, label='Cross-validation Loss (CV-5)', marker='o', linestyle='--',
-#              color='red')
-#
-#     plt.xlabel('Learning Rate', fontsize=14)
-#     plt.ylabel('MSE', fontsize=14)
-#     plt.title('Training and Cross-validation Loss vs Learning Rate', fontsize=16)
-#     plt.legend()
-#     plt.xscale('log')  # Use log scale to better visualize the trend of different learning rates
-#     plt.show()
-
-
-
-
-# Plotting function for multiple hidden layer configurations
-def plot_loss_curves(hidden_layer_configs, X_train, y_train, epochs=150, learning_rate=0.01):
+def plot_loss_curves(learning_rate, X_train, y_train, epochs=150):
     plt.figure(figsize=(10, 8))
-    for hidden_layers in hidden_layer_configs:
-        _, loss_values = train_neural_network(X_train, y_train, hidden_layers, epochs, learning_rate)
-        plt.plot(loss_values, label=f"Hidden Layers: {hidden_layers}")
+    for learning in learning_rate:
+        _, loss_values = train_neural_network(X_train, y_train, [32, 16], epochs, learning)
+        plt.plot(loss_values, label=f"Learning Rate: {learning}")
     plt.xlabel('Epochs', fontsize=14)
     plt.ylabel('MSE Loss', fontsize=14)
-    plt.title('Training Loss Curves for Different Hidden Layer Configurations')
+    plt.title('Training Loss Curves for Different Learning Rate Configurations')
     plt.legend()
     plt.show()
 
 
-# Function to plot neural network results for training and test data
 def plot_test_results(X_train_orig, y_train_orig, y_train_pred_orig,
-                                X_test_orig, y_test_orig, y_test_pred_orig, title):
-    # Plot training results
-    plt.figure(figsize=(8, 6))
-    plt.scatter(X_train_orig, y_train_orig, label='Training Data', color='blue', alpha=0.5)
-    plt.plot(X_train_orig, y_train_pred_orig, label='Model Prediction (Train)', color='red')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.title(f"{title} Prediction on Training Set")
-    plt.legend()
+                      X_test_orig, y_test_orig, y_test_pred_orig, title):
+    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+
+    axs[0].scatter(X_train_orig, y_train_orig, label='Training Data', color='blue', alpha=0.5)
+    axs[0].plot(X_train_orig, y_train_pred_orig, label='Model Prediction (Train)', color='red')
+    axs[0].set_xlabel('x')
+    axs[0].set_ylabel('y')
+    axs[0].set_title(f"{title} Prediction on Training Set")
+    axs[0].legend()
+
+    axs[1].scatter(X_test_orig, y_test_orig, label='Test Data', color='green', alpha=0.5)
+    axs[1].plot(X_test_orig, y_test_pred_orig, label='Model Prediction (Test)', color='orange')
+    axs[1].set_xlabel('x')
+    axs[1].set_ylabel('y')
+    axs[1].set_title(f"{title} Prediction on Testing Set")
+    axs[1].legend()
+
+    fig.suptitle(f"{title} Performance", fontsize=16)
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.show()
 
-    # Plot test results
-    plt.figure(figsize=(8, 6))
-    plt.scatter(X_test_orig, y_test_orig, label='Test Data', color='green', alpha=0.5)
-    plt.plot(X_test_orig, y_test_pred_orig, label='Model Prediction (Test)', color='orange')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.title(f"{title} Prediction on Testing Set")
-    plt.legend()
-    plt.show()
 
 
 
 def test_lin_reg(model, X_train, y_train, X_test, y_test):
-    #Test
     y_train_pred_lreg = model.predict(X_train)
     y_test_pred_lreg = model.predict(X_test)
 
@@ -280,7 +225,7 @@ def test_nn(model, X_train, y_train, X_test, y_test):
 
 
 
-def test_bayesian(model, trace):
+def test_bayesian(model, trace, X_train, y_train):
     # Summarize posterior distributions
     print("Posterior Summary:")
     summary = az.summary(trace)
@@ -291,10 +236,25 @@ def test_bayesian(model, trace):
     az.plot_posterior(trace, hdi_prob=0.95)
     plt.show()
 
-    slope_mean = trace.posterior['Slope'].mean().values
-    intercept_mean = trace.posterior['Intercept'].mean().values
-    print(f"Mean Slope: {slope_mean}, Mean Intercept: {intercept_mean}")
+    with model:
+        posterior_pred = pm.sample_posterior_predictive(trace)
 
+    mean_pred = posterior_pred['y_obs'].mean(axis=0)
+
+    # Plot predictions
+    plt.figure(figsize=(10, 6))
+    plt.scatter(X_train, y_train, alpha=0.7, label="Training Data")
+    plt.plot(X_train, mean_pred, color="red", label="Mean Prediction")
+    plt.fill_between(
+        X_train.flatten(),
+        np.percentile(posterior_pred['y_obs'], 2.5, axis=0),
+        np.percentile(posterior_pred['y_obs'], 97.5, axis=0),
+        color="gray", alpha=0.3, label="95% CI"
+    )
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.legend()
+    plt.show()
 
 
 # Main function to execute all tasks
@@ -304,19 +264,26 @@ def main():
     X_test, y_test = load_data("Data/regression_test.txt")
     X_train, y_train, X_test, y_test = scale_data(X_train, y_train, X_test, y_test)
 
-    linear_model = train_linear_regression(X_train, y_train)
-    test_lin_reg(linear_model, X_train, y_train, X_test, y_test)
+    # linear_model = train_linear_regression(X_train, y_train)
+    # test_lin_reg(linear_model, X_train, y_train, X_test, y_test)
 
     # Train Neural Network
-    nn_model, nn_loss = train_neural_network(X_train, y_train, hidden_layer_sizes=[64, 32], epochs=70, learning_rate=0.05)
-    hidden_layer_configs = [[8, 8], [16, 8], [32, 16], [64, 32], [128, 64]]  # Example configurations
-    plot_loss_curves(hidden_layer_configs, X_train, y_train, epochs=200, learning_rate=0.01)
+    # nn_model, nn_loss = train_neural_network(X_train, y_train, hidden_layer_sizes=[32, 16], epochs=90, learning_rate=0.035)
+    # learning_rates = [round(0.01 * i, 2) for i in range(1, 10, 2)]
+    # list = train_with_learning_rates(X_train, y_train, learning_rates, epochs=90)
+    # hidden_layer_configs = [[8, 8], [16, 8], [32, 16], [64, 32], [128, 64]]  # Example configurations
+    # plot_loss_curves(learning_rates, X_train, y_train, epochs=90)
+    # Example usage
+    # nn_model, nn_loss = train_neural_network(X_train, y_train, hidden_layer_sizes=[32, 16], epochs=80,
+    #                                          learning_rate=0.035, weight_decay=1e-5)
 
-    test_nn(nn_model, X_train, y_train, X_test, y_test)
+    # test_nn(nn_model, X_train, y_train, X_test, y_test)
 
     # Perform Bayesian Regression
-    bayesian_model, bayesian_trace = train_bayesian_model(X_train, y_train)
-    test_bayesian(bayesian_model, bayesian_trace)
+    # bayesian_model, bayesian_trace = train_bayesian_model(X_train, y_train)
+    bayesian_model, bayesian_trace = train_bayesian_regression(X_train, y_train, y_scaler, 1000)
+
+    # test_bayesian(bayesian_model, bayesian_trace, X_train, y_train)
 
 
 
