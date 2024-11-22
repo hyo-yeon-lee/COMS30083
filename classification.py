@@ -31,7 +31,7 @@ def split_data(X, y):
 # Task 7
 def train_logistic_regression(X_train, y_train):
     model = LogisticRegression(random_state=42,
-                               C = 0.216,
+                               C = 0.464,
                                max_iter = 500,
                                solver = 'newton-cg',
                                verbose=1)
@@ -198,39 +198,39 @@ def main():
     X, y = load_data()
     X_train, X_test, y_train, y_test = split_data(X, y) #scaled splitted dataset
 
-    plot_c_accuracies(X_train, y_train)
+    # plot_c_accuracies(X_train, y_train)
     # Task 7
-    # logistic_model = train_logistic_regression(X_train, y_train)
-    # log_train = evaluate_train_model(logistic_model, X_train, y_train)
-    # print("Logistic Regression Train Set: ", log_train)
+    logistic_model = train_logistic_regression(X_train, y_train)
+    log_train = evaluate_train_model(logistic_model, X_train, y_train)
+    print("Logistic Regression Train Set: ", log_train)
 
     # Task 8
-    # tree_model = train_decision_tree(X_train, y_train)
-    # tree_train = evaluate_train_model(tree_model, X_train, y_train)
-    # print("Tree Model Train Set: ", tree_train)
+    tree_model = train_decision_tree(X_train, y_train)
+    tree_train = evaluate_train_model(tree_model, X_train, y_train)
+    print("Tree Model Train Set: ", tree_train)
 
     # Task 9
-    # ensemble_model = random_search_forest(X_train, y_train)
-    # ens_train = evaluate_train_model(ensemble_model, X_train, y_train)
+    ensemble_model = random_search_forest(X_train, y_train)
+    ens_train = evaluate_train_model(ensemble_model, X_train, y_train)
 
     #Testing set
-    # log_test = evaluate_test_model(logistic_model, X_test, y_test)
-    # print(" Test Set Accuracy:", log_test)
-    # tree_test = evaluate_test_model(tree_model,X_test, y_test)
-    # print(" Test Set Accuracy:", tree_test)
+    log_test = evaluate_test_model(logistic_model, X_test, y_test)
+    print(" Test Set Accuracy:", log_test)
+    tree_test = evaluate_test_model(tree_model,X_test, y_test)
+    print(" Test Set Accuracy:", tree_test)
 
-    # ens_train = evaluate_test_model(ensemble_model, X_train, y_train)
-    # ens_test = evaluate_test_model(ensemble_model, X_test, y_test)
-    # print("Ensemble Model Test Set Accuracy:", ens_test)
-    # plot_c_accuracies(X_train, y_train)
+    ens_train = evaluate_test_model(ensemble_model, X_train, y_train)
+    ens_test = evaluate_test_model(ensemble_model, X_test, y_test)
+    print("Ensemble Model Test Set Accuracy:", ens_test)
+    plot_c_accuracies(X_train, y_train)
     # Plot losses
-    # tree_counts = range(10, 201, 10)  # Number of trees to iterate over
-    # plot_forest_loss_vs_trees(X_train, y_train, X_test, y_test, tree_counts)
+    tree_counts = range(10, 201, 10)  # Number of trees to iterate over
+    plot_forest_loss_vs_trees(X_train, y_train, X_test, y_test, tree_counts)
 
-    # plot_tree_losses(ensemble_model, X_train, y_train, loss_type='accuracy_loss')
-    # plot_tree_losses(ensemble_model, X_test, y_test, loss_type='accuracy_loss')
-    # ens_test = evaluate_test_model(ensemble_model, X_test, y_test)
-    # print("Ensemble Model Train Set: ", ens_train, " Test Set Accuracy:", ens_test)
+    plot_tree_losses(ensemble_model, X_train, y_train, loss_type='accuracy_loss')
+    plot_tree_losses(ensemble_model, X_test, y_test, loss_type='accuracy_loss')
+    ens_test = evaluate_test_model(ensemble_model, X_test, y_test)
+    print("Ensemble Model Train Set: ", ens_train, " Test Set Accuracy:", ens_test)
 
 
 if __name__ == "__main__":

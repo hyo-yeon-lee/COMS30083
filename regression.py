@@ -116,22 +116,28 @@ def train_bayesian_regression(X_train, y_train, y_scaler, num_samples=1000):
     with pm.Model() as model:
         intercept = pm.Normal("intercept", mu=0, sigma=10)
         slope = pm.Normal("slope", mu=0, sigma=10)
-        slope_quadratic = pm.Normal("slope_quadratic", mu=0, sigma=10)  # Quadratic term
+        slope_quadratic = pm.Normal("slope_quadratic", mu=0, sigma=10)
+        slope_cubic = pm.Normal("slope_cubic", mu=0, sigma=10)  # Cubic term
         noise = pm.Uniform("noise", lower=0, upper=200)
 
-        y_est = intercept + slope * X_train + slope_quadratic * X_train**2
+        y_est = (
+            intercept
+            + slope * X_train
+            + slope_quadratic * X_train**2
+            + slope_cubic * X_train**3
+        )
         y_obs = pm.Normal("y_obs", mu=y_est, sigma=noise, observed=y_train)
 
         trace = pm.sample(2000, tune=1000, return_inferencedata=True)
 
-    # Plot posterior distributions
-    pm.plot_posterior(trace, var_names=["intercept", "slope", "slope_quadratic", "noise"])
+    pm.plot_posterior(trace, var_names=["intercept", "slope", "slope_quadratic", "slope_cubic", "noise"])
     plt.show()
-
     summary = az.summary(trace, var_names=["intercept", "slope", "slope_quadratic", "noise"])
     print(summary)
 
     return model, trace
+
+
 
 
 
@@ -225,36 +231,7 @@ def test_nn(model, X_train, y_train, X_test, y_test):
 
 
 
-def test_bayesian(model, trace, X_train, y_train):
-    # Summarize posterior distributions
-    print("Posterior Summary:")
-    summary = az.summary(trace)
-    print(summary)
 
-    az.plot_trace(trace)
-    plt.show()
-    az.plot_posterior(trace, hdi_prob=0.95)
-    plt.show()
-
-    with model:
-        posterior_pred = pm.sample_posterior_predictive(trace)
-
-    mean_pred = posterior_pred['y_obs'].mean(axis=0)
-
-    # Plot predictions
-    plt.figure(figsize=(10, 6))
-    plt.scatter(X_train, y_train, alpha=0.7, label="Training Data")
-    plt.plot(X_train, mean_pred, color="red", label="Mean Prediction")
-    plt.fill_between(
-        X_train.flatten(),
-        np.percentile(posterior_pred['y_obs'], 2.5, axis=0),
-        np.percentile(posterior_pred['y_obs'], 97.5, axis=0),
-        color="gray", alpha=0.3, label="95% CI"
-    )
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.legend()
-    plt.show()
 
 
 # Main function to execute all tasks
@@ -264,26 +241,19 @@ def main():
     X_test, y_test = load_data("Data/regression_test.txt")
     X_train, y_train, X_test, y_test = scale_data(X_train, y_train, X_test, y_test)
 
-    # linear_model = train_linear_regression(X_train, y_train)
-    # test_lin_reg(linear_model, X_train, y_train, X_test, y_test)
+    linear_model = train_linear_regression(X_train, y_train)
+    test_lin_reg(linear_model, X_train, y_train, X_test, y_test)
 
     # Train Neural Network
-    # nn_model, nn_loss = train_neural_network(X_train, y_train, hidden_layer_sizes=[32, 16], epochs=90, learning_rate=0.035)
-    # learning_rates = [round(0.01 * i, 2) for i in range(1, 10, 2)]
-    # list = train_with_learning_rates(X_train, y_train, learning_rates, epochs=90)
-    # hidden_layer_configs = [[8, 8], [16, 8], [32, 16], [64, 32], [128, 64]]  # Example configurations
-    # plot_loss_curves(learning_rates, X_train, y_train, epochs=90)
     # Example usage
-    # nn_model, nn_loss = train_neural_network(X_train, y_train, hidden_layer_sizes=[32, 16], epochs=80,
-    #                                          learning_rate=0.035, weight_decay=1e-5)
+    nn_model, nn_loss = train_neural_network(X_train, y_train, hidden_layer_sizes=[32, 16], epochs=80,
+                                             learning_rate=0.035, weight_decay=1e-5)
 
-    # test_nn(nn_model, X_train, y_train, X_test, y_test)
+    test_nn(nn_model, X_train, y_train, X_test, y_test)
 
     # Perform Bayesian Regression
-    # bayesian_model, bayesian_trace = train_bayesian_model(X_train, y_train)
     bayesian_model, bayesian_trace = train_bayesian_regression(X_train, y_train, y_scaler, 1000)
 
-    # test_bayesian(bayesian_model, bayesian_trace, X_train, y_train)
 
 
 
