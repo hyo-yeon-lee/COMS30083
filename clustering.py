@@ -44,10 +44,10 @@ def kmeans_clustering(X, n_clusters=7):
 
 def gmm_clustering(X, K=7):
     gmm = GaussianMixture(n_components=K,
-                          max_iter=300,
+                          max_iter=100,
                           covariance_type="full",
                           warm_start=True,
-                          init_params='kmeans',
+                          init_params='random',
                           tol=1e-8).fit(X)
     cluster_assignments = gmm.predict(X)
     return cluster_assignments
@@ -74,11 +74,8 @@ def count_errors(labels, y_true):
 
 
 def perform_pca_and_normalize(X, n_components):
-    # Step 1: Perform PCA
     pca = PCA(n_components=n_components)
     X_reduced = pca.fit_transform(X)
-
-    # Step 2: Normalize the PCA-reduced data
     scaler = StandardScaler()
     X_normalized = scaler.fit_transform(X_reduced)
 
@@ -125,124 +122,63 @@ def explained_variance_analysis(X, target_components=44):
     # Print the variance retained with the target number of components
     print(f"Variance retained with {target_components} components: {cumulative_explained_variance[target_components - 1]:.2f}")
 
-def evaluate_dbi_hyperparameters(X, hyperparameter, values, **kwargs):
-    dbi_scores = []
-    for value in values:
-        kmeans = KMeans(n_clusters=7, random_state=42, **{hyperparameter: value}, **kwargs)
-        cluster_assignments = kmeans.fit_predict(X)
-        dbi = davies_bouldin_score(X, cluster_assignments)
-        dbi_scores.append(dbi)
-    return dbi_scores
 
-# Plotting function
-def plot_dbi(hyperparameter, values, dbi_scores):
+def silhouette_evaluate_hyperparameters(X, hyperparameter, values, model_class, **kwargs):
+    silhouette_scores = []
+    for value in values:
+        if model_class == GaussianMixture:
+            model = model_class(n_components=7, random_state=42, **{hyperparameter: value}, **kwargs)
+        elif model_class == KMeans:
+            model = model_class(n_clusters=7, random_state=42, **{hyperparameter: value}, **kwargs)
+        else:
+            raise ValueError(f"Unsupported model class: {model_class}")
+
+        cluster_assignments = model.fit_predict(X)
+        score = silhouette_score(X, cluster_assignments)
+        silhouette_scores.append(score)
+    return silhouette_scores
+
+
+def plot_silhouette(hyperparameter, values, silhouette_scores):
     plt.figure(figsize=(8, 6))
-    plt.plot(values, dbi_scores, marker='o')
+    plt.plot(values, silhouette_scores, marker='o')
     plt.xlabel(hyperparameter)
-    plt.ylabel('Davies-Bouldin Index')
-    plt.title(f'DBI vs {hyperparameter}')
+    plt.ylabel('Silhouette Score')
+    plt.title(f'Silhouette Score vs {hyperparameter}')
     plt.grid(True)
     plt.show()
 
-
-def evaluate_gmm_dbi_hyperparameters(X, hyperparameter, values, **kwargs):
-    dbi_scores = []
-    for value in values:
-        gmm = GaussianMixture(n_components=7, random_state=42, **{hyperparameter: value}, **kwargs)
-        cluster_assignments = gmm.fit_predict(X)
-        dbi = davies_bouldin_score(X, cluster_assignments)
-        dbi_scores.append(dbi)
-    return dbi_scores
-
-def plot_gmm_dbi(hyperparameter, values, dbi_scores):
-    plt.figure(figsize=(8, 6))
-    plt.plot(values, dbi_scores, marker='o')
-    plt.xlabel(hyperparameter)
-    plt.ylabel('Davies-Bouldin Index')
-    plt.title(f'GMM: DBI vs {hyperparameter}')
-    plt.grid(True)
-    plt.show()
 
 
 def main():
     print("Evaluating explained variance for PCA...")
     explained_variance_analysis(X_orig, target_components=44)
-    evaluate_pca_variance(X_subset, n_components=44)
+    # evaluate_pca_variance(X_subset, n_components=44)
 
-    # Step 2: Perform PCA and normalization
+    # Performing PCA
     n_components = 44
     X_pca_normalized, pca_model = perform_pca_and_normalize(X_subset, n_components)
 
-    # covariance_values = ['full', 'tied', 'diag', 'spherical']
-    # dbi_covariance = evaluate_gmm_dbi_hyperparameters(X_pca_normalized, 'covariance_type', covariance_values)
-    # plot_gmm_dbi('covariance_type', covariance_values, dbi_covariance)
-    #
-    # # Evaluate DBI for `init_params`
-    # init_values = ['kmeans', 'random']
-    # dbi_init_params = evaluate_gmm_dbi_hyperparameters(X_pca_normalized, 'init_params', init_values)
-    # plot_gmm_dbi('init_params', init_values, dbi_init_params)
-    #
-    # # Evaluate DBI for `max_iter`
-    # max_iter_values = [100, 200, 300, 400, 500]
-    # dbi_max_iter = evaluate_gmm_dbi_hyperparameters(X_pca_normalized, 'max_iter', max_iter_values)
-    # plot_gmm_dbi('max_iter', max_iter_values, dbi_max_iter)
-
-    # n_init_values = [1, 5, 10, 20, 'auto']
-    # dbi_n_init = evaluate_dbi_hyperparameters(X_pca_normalized, 'n_init', n_init_values)
-    # plot_dbi('n_init', n_init_values, dbi_n_init)
-    #
-    # # 2. Evaluate DBI for `init`
-    # init_values = ['k-means++', 'random']
-    # dbi_init = evaluate_dbi_hyperparameters(X_pca_normalized, 'init', init_values)
-    # plot_dbi('init', init_values, dbi_init)
-    #
-    # # 3. Evaluate DBI for `tol`
-    # tol_values = [1e-4, 1e-3, 1e-2]
-    # dbi_tol = evaluate_dbi_hyperparameters(X_pca_normalized, 'tol', tol_values)
-    # plot_dbi('tol', tol_values, dbi_tol)
-    #
-    # max_iter = [100, 200, 300, 400, 500]
-    # dbi_tol = evaluate_dbi_hyperparameters(X_pca_normalized, 'max_iter', max_iter)
-    # plot_dbi('max_iter', max_iter, dbi_tol)
-    # # print(f"Shape after PCA: {X_pca_normalized.shape}")
-    # # print(f"Explained variance ratio (first few components): {pca_model.explained_variance_ratio_[:5]}")
-    # #
-    # # # Step 3: Run GMM on the PCA-reduced data
-    # print("Running GMM on PCA-reduced data...")
-    gmm_assignments = gmm_clustering(X_pca_normalized)
-    # #
-    # # # Step 4: Evaluate clustering performance for GMM
-    # print("Evaluating GMM clustering performance...")
-    gmm_errors, total_pairs = count_errors(gmm_assignments, y_subset)
+    # K-means
+    kmeans_assignments = kmeans_clustering(X_pca_normalized)
+    kmeans_errors, total_pairs = count_errors(kmeans_assignments, y_subset)
     print("Total number of pairs with the same class label:", total_pairs)
+    print("Number of errors made by K-means on PCA-reduced data:", kmeans_errors)
+    print("Error rate (%):", (kmeans_errors / total_pairs) * 100)
+
+   #GMM
+    gmm_assignments = gmm_clustering(X_pca_normalized)
+    gmm_errors, _ = count_errors(gmm_assignments, y_subset)
     print("Number of errors made by GMM on PCA-reduced data:", gmm_errors)
     print("Error rate (%):", (gmm_errors / total_pairs) * 100)
-    # #
-    # # # Step 5: Run K-means on the PCA-reduced data
-    # print("Running K-meansc on PCA-reduced data...")
-    # kmeans_assignments = kmeans_clustering(X_pca_normalized)
-    # #
-    # # # Step 6: Evaluate clustering performance for K-means
-    # print("Evaluating K-means clustering performance...")
-    # kmeans_errors, total_pairs = count_errors(kmeans_assignments, y_subset)
-    # print("Number of errors made by K-means on PCA-reduced data:", kmeans_errors)
-    # print("Error rate (%):", (kmeans_errors / total_pairs) * 100)
-    #
-    # random_assignments = random_baseline_clustering(X_pca_normalized, 7)
-    # random_errors , _ = count_errors(random_assignments, y_subset)
-    # print("Number of errors made by Random Baseline on PCA-reduced data:", random_errors)
-    # print("Error rate (%):", (random_errors / total_pairs) * 100)
-    #
-    # # Step 7: Visualize the clustering results (optional)
-    # print("Visualizing K-means clustering results...")
-    # plt.figure(figsize=(8, 8))
-    # plt.scatter(X_pca_normalized[:, 0], X_pca_normalized[:, 1], c=kmeans_assignments, cmap='viridis', alpha=0.8)
-    # plt.title("K-means Clustering on PCA-Reduced Data")
-    # plt.xlabel("Principal Component 1")
-    # plt.ylabel("Principal Component 2")
-    # plt.show()
 
-    print("Done.")
+    #Random
+    random_assignments = random_baseline_clustering(X_pca_normalized, 7)
+    random_errors , _ = count_errors(random_assignments, y_subset)
+    print("Number of errors made by Random Baseline on PCA-reduced data:", random_errors)
+    print("Error rate (%):", (random_errors / total_pairs) * 100)
+
+
 
 
 if __name__ == "__main__":

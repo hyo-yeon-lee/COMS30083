@@ -30,8 +30,6 @@ def split_data(X, y):
 
 # Task 7
 def train_logistic_regression(X_train, y_train):
-    # scaler = StandardScaler()
-    # X_scaled = scaler.fit_transform(X_train)
     model = LogisticRegression(random_state=42,
                                C = 0.216,
                                max_iter = 500,
@@ -45,7 +43,7 @@ def train_logistic_regression(X_train, y_train):
 def train_decision_tree(X_train, y_train):
     model = DecisionTreeClassifier(random_state=42,
                                    criterion = 'entropy',
-                                   max_depth = 25,
+                                   max_depth = 20,
                                    splitter = 'best',
                                    min_samples_leaf = 5)
     model.fit(X_train, y_train)
@@ -71,7 +69,6 @@ def plot_forest_loss_vs_trees(X_train, y_train, X_test, y_test, tree_counts):
     test_losses = []
 
     for n_trees in tree_counts:
-        # Train a Random Forest with the current number of trees
         forest_model = RandomForestClassifier(
             random_state=42,
             n_estimators=n_trees,
@@ -82,18 +79,13 @@ def plot_forest_loss_vs_trees(X_train, y_train, X_test, y_test, tree_counts):
             bootstrap=True
         )
         forest_model.fit(X_train, y_train)
-
-        # Calculate misclassification loss for training and testing sets
         train_loss = 1 - accuracy_score(y_train, forest_model.predict(X_train))
-        test_loss = 1 - accuracy_score(y_test, forest_model.predict(X_test))
 
         train_losses.append(train_loss)
-        test_losses.append(test_loss)
 
     # Plot losses
     plt.figure(figsize=(12, 6))
     plt.plot(tree_counts, train_losses, label='Training Loss', marker='o')
-    # plt.plot(tree_counts, test_losses, label='Testing Loss', marker='x')
     plt.xlabel('Number of Trees')
     plt.ylabel('Loss (Misclassification Rate)')
     plt.title('Loss vs Number of Trees in Random Forest')
@@ -116,6 +108,7 @@ def evaluate_c_values(X_train, y_train, C_values):
     cv_accuracies = []
 
     for C in C_values:
+        print(f"Calculating {C} ...")
         model = LogisticRegression(random_state=42, C=C, max_iter=500, solver='newton-cg', verbose=0)
         model.fit(X_train, y_train)
         # Training accuracy
@@ -127,15 +120,17 @@ def evaluate_c_values(X_train, y_train, C_values):
 
     return train_accuracies, cv_accuracies
 
+
 def plot_c_accuracies(X_train, y_train):
     # Define the range of C values
-    C_values = np.linspace(0.01, 0.5, 50)
+    C_values = np.logspace(-2, 1, 10)
     train_accuracies, cv_accuracies = evaluate_c_values(X_train, y_train, C_values)
 
     # Plot results
     plt.figure(figsize=(10, 6))
     plt.plot(C_values, train_accuracies, label='Training Accuracy', marker='o')
     plt.plot(C_values, cv_accuracies, label='Cross-Validation Accuracy', marker='x')
+    plt.xscale('log')  # Logarithmic scale for C values
     plt.xlabel('C Value (Regularization Strength)')
     plt.ylabel('Accuracy')
     plt.title('Training vs Cross-Validation Accuracy for Logistic Regression')
@@ -144,13 +139,11 @@ def plot_c_accuracies(X_train, y_train):
     plt.show()
 
 
+
 def evaluate_train_model(model, X_train, y_train):
     print("Received model and train data...")
     train_accuracy = round(model.score(X_train,  y_train), 4)
     print("Calculated train accuracy... ", train_accuracy)
-    print("Plotting into a graph...")
-    # plot_performance(model, X_train, y_train)
-
     return train_accuracy
 
 
@@ -172,9 +165,6 @@ def plot_performance(model, X, y):
     ax.set_xlabel('True Labels')
     ax.set_ylabel('Predicted Labels')
     ax.set_title('True vs Predicted Labels (Test Set)')
-
-
-from sklearn.metrics import log_loss
 
 
 def plot_tree_losses(forest_model, X, y, loss_type='accuracy_loss'):
@@ -208,11 +198,11 @@ def main():
     X, y = load_data()
     X_train, X_test, y_train, y_test = split_data(X, y) #scaled splitted dataset
 
+    plot_c_accuracies(X_train, y_train)
     # Task 7
     # logistic_model = train_logistic_regression(X_train, y_train)
     # log_train = evaluate_train_model(logistic_model, X_train, y_train)
     # print("Logistic Regression Train Set: ", log_train)
-
 
     # Task 8
     # tree_model = train_decision_tree(X_train, y_train)
