@@ -34,8 +34,9 @@ def plot_clusters(X, cluster_assignments, centroids, title):
 def kmeans_clustering(X, n_clusters=7):
     kmeans = KMeans(n_clusters=n_clusters,
                     init='random',
-                    n_init= 'auto',
+                    n_init= 'auto', # could remove...
                     max_iter=100,
+                    tol= 1e-4,
                     random_state=42).fit(X)
     cluster_assignments = kmeans.predict(X)
     centroid_locations = kmeans.cluster_centers_

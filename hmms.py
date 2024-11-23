@@ -45,18 +45,18 @@ def train_hmm_without_transitions(rewards_data):
     model = hmm.CategoricalHMM(n_components=n_states, n_iter=100)  # random init
     model.n_features = n_rewards
     model.fit(rewards_data)
-    print("------------------------------------WITHOUT------------------------------------")
-
-    print("Learned Emission Matrix (Task 14):")
-    print("Initial probabilities: ", model.startprob_)
-    print("Initial prior probabilities: ", model.startprob_prior)
-    print("Transmat probability: " , model.transmat_)
-    print("emission probability: " , model.emissionprob_)
-    print("emission prior probability: " , model.emissionprob_prior)
-
-    print(model.emissionprob_)
-    visualize_transition_matrix(model.transmat_, "True Transition Matrix Not Probided")
-    return model.emissionprob_
+    # print("------------------------------------WITHOUT------------------------------------")
+    #
+    # print("Learned Emission Matrix (Task 14):")
+    # print("Initial probabilities: ", model.startprob_)
+    # print("Initial prior probabilities: ", model.startprob_prior)
+    # # print("Transmat probability: " , model.transmat_)
+    # print("emission probability: " , model.emissionprob_)
+    # print("emission prior probability: " , model.emissionprob_prior)
+    #
+    # print(model.emissionprob_)
+    # visualize_transition_matrix(model.transmat_, "True Transition Matrix Not Probided")
+    return model, model.emissionprob_
 
 # Code Task 15: EM Algorithm with Known Transition Probabilities
 def train_hmm_with_transitions(rewards_data, true_transmat):
@@ -66,23 +66,81 @@ def train_hmm_with_transitions(rewards_data, true_transmat):
     model.params = "se"  # only estimate startprob and emissionprob
     model.init_params = "se"
     model.fit(rewards_data)
-    print("Learned Emission Matrix (Task 15):")
-    print(model.emissionprob_)
-    visualize_transition_matrix(model.transmat_, "True Transition Matrix Provided")
-    print("------------------------------------WITH------------------------------------")
-    print("Learned Emission Matrix (Task 14):")
-    print("Initial probabilities: ", model.startprob_)
-    print("Initial prior probabilities: ", model.startprob_prior)
-    print("Transmat probability: " , model.transmat_)
-    print("emission probability: " , model.emissionprob_)
-    print("emission prior probability: " , model.emissionprob_prior)
-    return model.emissionprob_
+    # print("Learned Emission Matrix (Task 15):")
+    # print(model.emissionprob_)
+    # visualize_transition_matrix(model.transmat_, "True Transition Matrix Provided")
+    # print("------------------------------------WITH------------------------------------")
+    # print("Learned Emission Matrix (Task 14):")
+    # print("Initial probabilities: ", model.startprob_)
+    # print("Initial prior probabilities: ", model.startprob_prior)
+    # print("Transmat probability: " , model.transmat_)
+    # print("emission probability: " , model.emissionprob_)
+    # print("emission prior probability: " , model.emissionprob_prior)
+    return model, model.emissionprob_
+
+
+def plot_transition_comparison(true_mat, learned_mat, title1="Learned Transition Matrix", title2="Given True Transition Matrix"):
+    plt.figure(figsize=(14, 6))
+
+    # Plot the true transition matrix
+    plt.subplot(1, 2, 1)
+    sns.heatmap(true_mat, annot=True, fmt=".2f", cmap="Blues", cbar=True)
+    plt.title(title1)
+    plt.xlabel("To State")
+    plt.ylabel("From State")
+
+    # Plot the learned transition matrix
+    plt.subplot(1, 2, 2)
+    sns.heatmap(learned_mat, annot=True, fmt=".2f", cmap="Blues", cbar=True)
+    plt.title(title2)
+    plt.xlabel("To State")
+    plt.ylabel("From State")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_emission_difference(emission1, emission2, title="Difference in Emission Matrices (Absolute)"):
+    """
+    Plots a heatmap of the absolute differences between two emission matrices.
+
+    Parameters:
+        emission1 (np.array): First emission matrix.
+        emission2 (np.array): Second emission matrix.
+        title (str): Title for the heatmap.
+    """
+    # Calculate the absolute difference
+    difference_matrix = np.abs(emission1 - emission2)
+
+    # Plot the heatmap
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(difference_matrix, annot=True, fmt=".2f", cmap="Reds", cbar=True)
+    plt.title(title)
+    plt.xlabel("Rewards")
+    plt.ylabel("States")
+    plt.show()
+
+# Example usage in your code
+
 
 # Run tasks and visualize
-without_prob = train_hmm_without_transitions(rewards_data)
-with_prob = train_hmm_with_transitions(rewards_data, true_transmat)
+# Run tasks and visualize
+without_model, without_prob = train_hmm_without_transitions(rewards_data)
+with_model, with_prob = train_hmm_with_transitions(rewards_data, true_transmat)
 
+# Extract the learned transition matrix from the model
+learned_transmat = without_model.transmat_
+given_transmat = with_model.transmat_
+
+# Compare true and learned transition matrices
+plot_transition_comparison(learned_transmat, given_transmat)
+
+# Compare emission probabilities
+plot_emission_difference(without_prob, with_prob)
+
+# Print the MSE for the emission probabilities
 print("MSE: ", mean_squared_error(with_prob, without_prob))
-visualize_transition_matrix(true_transmat, "True transition Matrix")
+
+
 
 

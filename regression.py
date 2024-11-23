@@ -84,8 +84,6 @@ def train_neural_network(X, y, hidden_layer_sizes=[32, 16], epochs=90, learning_
         optimizer.step()
         scheduler.step()
 
-        if epoch % 10 == 0:
-            print(f"Epoch {epoch}, Loss: {loss.item()}, Learning Rate: {scheduler.get_last_lr()}")
 
         loss_values.append(loss.item())
 
@@ -93,70 +91,38 @@ def train_neural_network(X, y, hidden_layer_sizes=[32, 16], epochs=90, learning_
 
 
 
-def plot_grad_flow(model, epoch):
-    avg_grads = []
-    layers = []
-
-    for name, param in model.named_parameters():
-        if param.requires_grad and param.grad is not None:
-            layers.append(name)
-            avg_grads.append(param.grad.abs().mean().item())
-
-    plt.figure(figsize=(10, 6))
-    plt.barh(layers, avg_grads, color="b", alpha=0.6)
-    plt.xlabel("Average Gradient Magnitude", fontsize=14)
-    plt.ylabel("Layers", fontsize=14)
-    plt.title(f"Gradient Flow at Epoch {epoch}", fontsize=16)
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-
 def train_bayesian_regression(X_train, y_train, y_scaler, num_samples=1000):
     with pm.Model() as model:
-        intercept = pm.Normal("intercept", mu=0, sigma=10)
-        slope = pm.Normal("slope", mu=0, sigma=10)
-        slope_quadratic = pm.Normal("slope_quadratic", mu=0, sigma=10)
-        slope_cubic = pm.Normal("slope_cubic", mu=0, sigma=10)  # Cubic term
-        noise = pm.Uniform("noise", lower=0, upper=200)
+        w0 = pm.Normal("w0", mu=0, sigma=10)
+        w1 = pm.Normal("w1", mu=0, sigma=10)
+        w2 = pm.Normal("w2", mu=0, sigma=10)
+        w3 = pm.Normal("w3", mu=0, sigma=10)
+
+        std_y = np.std(y_train)
+        residuals = y_train - np.mean(y_train)
+        sigma_original = np.std(residuals)
+        sigma_scaled = sigma_original / std_y
+        print(f"sigma: {sigma_scaled}")
+
+        noise = pm.Uniform("noise", lower=0, upper=sigma_scaled)
 
         y_est = (
-            intercept
-            + slope * X_train
-            + slope_quadratic * X_train**2
-            + slope_cubic * X_train**3
+            w0
+            + w1 * X_train
+            + w2 * X_train**2
+            + w3 * X_train**3
         )
         y_obs = pm.Normal("y_obs", mu=y_est, sigma=noise, observed=y_train)
 
-        trace = pm.sample(2000, tune=1000, return_inferencedata=True)
+        trace = pm.sample(1250, tune=200, return_inferencedata=True)
 
-    pm.plot_posterior(trace, var_names=["intercept", "slope", "slope_quadratic", "slope_cubic", "noise"])
-    plt.show()
-    summary = az.summary(trace, var_names=["intercept", "slope", "slope_quadratic", "noise"])
+    summary = az.summary(trace, var_names=["w0", "w1", "w2", "w3", "noise"])
     print(summary)
+
 
     return model, trace
 
 
-
-
-
-
-
-def train_with_learning_rates(X_train, y_train, learning_rates, epochs=90):
-    train_loss_list = []
-
-    for lr in learning_rates:
-        # Train the model with the current learning rate
-        nn_model, loss_values = train_neural_network(X_train, y_train, hidden_layer_sizes=[32, 16],
-                                                     epochs=epochs, learning_rate=lr)
-
-        # Calculate the training loss (last value from the loss_values)
-        train_loss = loss_values[-1]
-        print(f"{lr}: ")
-        train_loss_list.append(train_loss)
-
-    return train_loss_list
 
 
 def plot_loss_curves(learning_rate, X_train, y_train, epochs=150):
@@ -232,9 +198,6 @@ def test_nn(model, X_train, y_train, X_test, y_test):
 
 
 
-
-
-# Main function to execute all tasks
 def main():
     # Load and scale data
     X_train, y_train = load_data("Data/regression_train.txt")
@@ -244,14 +207,10 @@ def main():
     linear_model = train_linear_regression(X_train, y_train)
     test_lin_reg(linear_model, X_train, y_train, X_test, y_test)
 
-    # Train Neural Network
-    # Example usage
     nn_model, nn_loss = train_neural_network(X_train, y_train, hidden_layer_sizes=[32, 16], epochs=80,
                                              learning_rate=0.035, weight_decay=1e-5)
-
     test_nn(nn_model, X_train, y_train, X_test, y_test)
 
-    # Perform Bayesian Regression
     bayesian_model, bayesian_trace = train_bayesian_regression(X_train, y_train, y_scaler, 1000)
 
 

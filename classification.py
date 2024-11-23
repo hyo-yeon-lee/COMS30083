@@ -32,7 +32,7 @@ def split_data(X, y):
 def train_logistic_regression(X_train, y_train):
     model = LogisticRegression(random_state=42,
                                C = 0.464,
-                               max_iter = 500,
+                               max_iter = 25,
                                solver = 'newton-cg',
                                verbose=1)
     model.fit(X_train, y_train)
@@ -45,7 +45,7 @@ def train_decision_tree(X_train, y_train):
                                    criterion = 'entropy',
                                    max_depth = 20,
                                    splitter = 'best',
-                                   min_samples_leaf = 5)
+                                   min_samples_leaf = 3)
     model.fit(X_train, y_train)
     return model
 
@@ -141,18 +141,14 @@ def plot_c_accuracies(X_train, y_train):
 
 
 def evaluate_train_model(model, X_train, y_train):
-    print("Received model and train data...")
     train_accuracy = round(model.score(X_train,  y_train), 4)
-    print("Calculated train accuracy... ", train_accuracy)
     return train_accuracy
 
 
 def evaluate_test_model(model, X_test, y_test):
-    print("Received model and test data...")
+    print("HERE")
     test_accuracy = round(model.score(X_test, y_test), 4)
-    print("Calculated terst accuracy...", test_accuracy)
-    print("Plotting into a graph...")
-    plot_performance(model, X_test, y_test)
+    # plot_performance(model, X_test, y_test)
 
     return test_accuracy
 
@@ -198,7 +194,6 @@ def main():
     X, y = load_data()
     X_train, X_test, y_train, y_test = split_data(X, y) #scaled splitted dataset
 
-    # plot_c_accuracies(X_train, y_train)
     # Task 7
     logistic_model = train_logistic_regression(X_train, y_train)
     log_train = evaluate_train_model(logistic_model, X_train, y_train)
@@ -215,14 +210,14 @@ def main():
 
     #Testing set
     log_test = evaluate_test_model(logistic_model, X_test, y_test)
-    print(" Test Set Accuracy:", log_test)
+    print(" Log reg Test Set Accuracy:", log_test)
     tree_test = evaluate_test_model(tree_model,X_test, y_test)
-    print(" Test Set Accuracy:", tree_test)
+    print(" Decision Tree Test Set Accuracy:", tree_test)
 
     ens_train = evaluate_test_model(ensemble_model, X_train, y_train)
     ens_test = evaluate_test_model(ensemble_model, X_test, y_test)
     print("Ensemble Model Test Set Accuracy:", ens_test)
-    plot_c_accuracies(X_train, y_train)
+
     # Plot losses
     tree_counts = range(10, 201, 10)  # Number of trees to iterate over
     plot_forest_loss_vs_trees(X_train, y_train, X_test, y_test, tree_counts)
