@@ -8,7 +8,7 @@ from sklearn.datasets import fetch_covtype
 from itertools import combinations
 from sklearn.preprocessing import StandardScaler
 
-# Load data
+# Task 1
 np.random.seed(42)
 data = fetch_covtype()
 X_orig = data.data
@@ -22,19 +22,11 @@ scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X_subset)
 
 
-
-def plot_clusters(X, cluster_assignments, centroids, title):
-    plt.figure(figsize=(8, 8))
-    plt.scatter(X[:, 0], X[:, 1], s=20, c=cluster_assignments, cmap='viridis', alpha=0.8)
-    plt.scatter(centroids[:, 0], centroids[:, 1], s=200, marker='X', c='red', edgecolors='k')
-    plt.title(title)
-    plt.show()
-
-
+# Task 2
 def kmeans_clustering(X, n_clusters=7):
     kmeans = KMeans(n_clusters=n_clusters,
                     init='random',
-                    n_init= 'auto', # could remove...
+                    n_init= 'auto',
                     max_iter=100,
                     tol= 1e-4,
                     random_state=42).fit(X)
@@ -43,6 +35,7 @@ def kmeans_clustering(X, n_clusters=7):
     return cluster_assignments
 
 
+# Task 3
 def gmm_clustering(X, K=7):
     gmm = GaussianMixture(n_components=K,
                           max_iter=100,
@@ -54,15 +47,14 @@ def gmm_clustering(X, K=7):
     return cluster_assignments
 
 
-
+# Task 4
 def random_baseline_clustering(X, K=7):
-    # Generate random centroids in the original feature space
     random_centroids = np.random.rand(K, X.shape[1]) * np.ptp(X, axis=0) + np.min(X, axis=0)
-
     random_assignments = np.random.choice(K, size=X.shape[0], replace=True)
     return random_assignments
 
 
+# Task 5
 def count_errors(labels, y_true):
     errors = 0
     total_pairs = 0

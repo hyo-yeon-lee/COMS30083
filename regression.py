@@ -2,12 +2,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from PIL.GimpGradientFile import linear
 from PIL.ImageOps import scale
 import arviz as az
 import pymc as pm
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold, train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 # from theano.compile import shape
@@ -41,11 +42,39 @@ def descale(X_train, y_train, y_pred):
     return X_train_orig, y_train_orig, y_train_pred_orig
 
 
-# Linear regression model training function
-def train_linear_regression(X_train, y_train):
-    model = LinearRegression().fit(X_train, y_train)
+# Function to add polynomial features
+def add_polynomial_features(X, degree=3):
+    poly = PolynomialFeatures(degree=degree)
+    return poly.fit_transform(X)
 
-    return model
+
+# Linear regression model training function with polynomial features
+def train_linear_regression(X_train, y_train, degree=3):
+    X_train_poly = add_polynomial_features(X_train, degree)
+    model = LinearRegression(fit_intercept=True)
+    model.fit(X_train_poly, y_train)
+
+    return model, X_train_poly
+
+
+def test_lin_reg(model, X_train, y_train, X_test, y_test, degree=3):
+    # Transform features to polynomial
+    X_train_poly = add_polynomial_features(X_train, degree)
+    X_test_poly = add_polynomial_features(X_test, degree)
+
+    y_train_pred_lreg = model.predict(X_train_poly)
+    y_test_pred_lreg = model.predict(X_test_poly)
+
+    X_train_orig, y_train_orig, y_train_pred_orig = descale(X_train, y_train, y_train_pred_lreg)
+    X_test_orig, y_test_orig, y_test_pred_orig = descale(X_test, y_test, y_test_pred_lreg)
+
+    mse_train_lreg = mean_squared_error(y_train_orig, y_train_pred_orig)
+    mse_test_lreg = mean_squared_error(y_test_orig, y_test_pred_orig)
+    print(f"Train accuracy: {mse_train_lreg},   Test accuracy: {mse_test_lreg}")
+
+    plot_test_results(X_train_orig, y_train_orig, y_train_pred_orig,
+                      X_test_orig, y_test_orig, y_test_pred_orig, "Linear Regression (Polynomial)")
+
 
 
 def train_neural_network(X, y, hidden_layer_sizes=[32, 16], epochs=90, learning_rate=0.018, weight_decay=1e-4, clip_value=1.0):
@@ -98,13 +127,7 @@ def train_bayesian_regression(X_train, y_train, y_scaler, num_samples=1000):
         w2 = pm.Normal("w2", mu=0, sigma=10)
         w3 = pm.Normal("w3", mu=0, sigma=10)
 
-        std_y = np.std(y_train)
-        residuals = y_train - np.mean(y_train)
-        sigma_original = np.std(residuals)
-        sigma_scaled = sigma_original / std_y
-        print(f"sigma: {sigma_scaled}")
-
-        noise = pm.Uniform("noise", lower=0, upper=sigma_scaled)
+        noise = pm.Uniform("noise", lower=0, upper=200)
 
         y_est = (
             w0
@@ -112,7 +135,7 @@ def train_bayesian_regression(X_train, y_train, y_scaler, num_samples=1000):
             + w2 * X_train**2
             + w3 * X_train**3
         )
-        y_obs = pm.Normal("y_obs", mu=y_est, sigma=noise, observed=y_train)
+        likelihood = pm.Normal("likelihood", mu=y_est, sigma=noise, observed=y_train)
 
         trace = pm.sample(1250, tune=200, return_inferencedata=True)
 
@@ -161,23 +184,6 @@ def plot_test_results(X_train_orig, y_train_orig, y_train_pred_orig,
 
 
 
-
-def test_lin_reg(model, X_train, y_train, X_test, y_test):
-    y_train_pred_lreg = model.predict(X_train)
-    y_test_pred_lreg = model.predict(X_test)
-
-    X_train_orig, y_train_orig, y_train_pred_orig = descale(X_train, y_train, y_train_pred_lreg)
-    X_test_orig, y_test_orig, y_test_pred_orig = descale(X_test, y_test, y_test_pred_lreg)
-
-    mse_train_lreg = mean_squared_error(y_train_orig, y_train_pred_orig)
-    mse_test_lreg = mean_squared_error(y_test_orig, y_test_pred_orig)
-    print(f"Train accuracy: {mse_train_lreg},   Test accuracy: {mse_test_lreg}")
-
-    plot_test_results(X_train_orig, y_train_orig, y_train_pred_orig,
-                                X_test_orig, y_test_orig, y_test_pred_orig, "Linear Regression")
-
-
-
 def test_nn(model, X_train, y_train, X_test, y_test):
     with torch.no_grad():
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
@@ -202,16 +208,24 @@ def main():
     # Load and scale data
     X_train, y_train = load_data("Data/regression_train.txt")
     X_test, y_test = load_data("Data/regression_test.txt")
+    # X_train_orig, y_train_orig = X_train, y_train
     X_train, y_train, X_test, y_test = scale_data(X_train, y_train, X_test, y_test)
 
-    linear_model = train_linear_regression(X_train, y_train)
-    test_lin_reg(linear_model, X_train, y_train, X_test, y_test)
+    degree = 3  # Degree of the polynomial
+    linear_model, X_train_poly = train_linear_regression(X_train, y_train, degree)
+    test_lin_reg(linear_model, X_train, y_train, X_test, y_test, degree)
+    X_linreg = add_polynomial_features(X_test)
+    lin_score = linear_model.score(X_linreg, y_test)
+    print(f"Linear score: {lin_score}")
+
 
     nn_model, nn_loss = train_neural_network(X_train, y_train, hidden_layer_sizes=[32, 16], epochs=80,
                                              learning_rate=0.035, weight_decay=1e-5)
     test_nn(nn_model, X_train, y_train, X_test, y_test)
+    nn_score = nn_model.score(X_test, y_test)
+    print(f"NN score: {nn_score}")
 
-    bayesian_model, bayesian_trace = train_bayesian_regression(X_train, y_train, y_scaler, 1000)
+    # bayesian_model, bayesian_trace = train_bayesian_regression(X_train_orig, y_train_orig, y_scaler, 1000)
 
 
 

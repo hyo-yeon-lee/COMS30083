@@ -56,7 +56,6 @@ def random_search_forest(X_train, y_train):
                                       n_estimators=150,
                                       min_samples_leaf=3,
                                       min_samples_split=5,
-                                      max_features=None,
                                       max_depth=22,
                                       bootstrap=True)
     model.fit(X_train, y_train)
@@ -74,7 +73,6 @@ def plot_forest_loss_vs_trees(X_train, y_train, X_test, y_test, tree_counts):
             n_estimators=n_trees,
             min_samples_leaf=3,
             min_samples_split=5,
-            max_features=None,
             max_depth=22,
             bootstrap=True
         )
@@ -195,24 +193,24 @@ def main():
     X_train, X_test, y_train, y_test = split_data(X, y) #scaled splitted dataset
 
     # Task 7
-    logistic_model = train_logistic_regression(X_train, y_train)
-    log_train = evaluate_train_model(logistic_model, X_train, y_train)
-    print("Logistic Regression Train Set: ", log_train)
+    # logistic_model = train_logistic_regression(X_train, y_train)
+    # log_train = evaluate_train_model(logistic_model, X_train, y_train)
+    # print("Logistic Regression Train Set: ", log_train)
 
     # Task 8
-    tree_model = train_decision_tree(X_train, y_train)
-    tree_train = evaluate_train_model(tree_model, X_train, y_train)
-    print("Tree Model Train Set: ", tree_train)
+    # tree_model = train_decision_tree(X_train, y_train)
+    # tree_train = evaluate_train_model(tree_model, X_train, y_train)
+    # print("Tree Model Train Set: ", tree_train)
 
     # Task 9
     ensemble_model = random_search_forest(X_train, y_train)
     ens_train = evaluate_train_model(ensemble_model, X_train, y_train)
 
     #Testing set
-    log_test = evaluate_test_model(logistic_model, X_test, y_test)
-    print(" Log reg Test Set Accuracy:", log_test)
-    tree_test = evaluate_test_model(tree_model,X_test, y_test)
-    print(" Decision Tree Test Set Accuracy:", tree_test)
+    # log_test = evaluate_test_model(logistic_model, X_test, y_test)
+    # print(" Log reg Test Set Accuracy:", log_test)
+    # tree_test = evaluate_test_model(tree_model,X_test, y_test)
+    # print(" Decision Tree Test Set Accuracy:", tree_test)
 
     ens_train = evaluate_test_model(ensemble_model, X_train, y_train)
     ens_test = evaluate_test_model(ensemble_model, X_test, y_test)
