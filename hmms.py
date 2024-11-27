@@ -1,10 +1,7 @@
-from venv import create
-
 import numpy as np
 from hmmlearn import hmm
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import mean_squared_error
 
 rewards_data = np.loadtxt('Data/rewards.txt', dtype=int).reshape(-1, 1)
 n_states = 9
@@ -39,7 +36,7 @@ def visualize_transition_matrix(transmat, title="Transition Matrix"):
 
 # Code Task 14
 def train_hmm_without_transitions(rewards_data):
-    model = hmm.CategoricalHMM(n_components=n_states, n_iter=100)  # random init
+    model = hmm.CategoricalHMM(n_components=n_states, n_iter=50, tol=1e-4)  # random init
     model.n_features = n_rewards
     model.fit(rewards_data)
     return model, model.emissionprob_
@@ -47,7 +44,7 @@ def train_hmm_without_transitions(rewards_data):
 
 # Code Task 15
 def train_hmm_with_transitions(rewards_data, true_transmat):
-    model = hmm.CategoricalHMM(n_components=n_states, n_iter=100, tol=1e-4)
+    model = hmm.CategoricalHMM(n_components=n_states, n_iter=50, tol=1e-4)
     model.n_features = n_rewards
     model.transmat_ = true_transmat
     model.params = "se"
@@ -102,6 +99,32 @@ def plot_emission_difference(emission1, emission2, title="Difference in Emission
     plt.show()
 
 
+def plot_emission_matrices_with_coordinates(emission1, emission2,
+                                            title1="Emission Matrix (Without Transitions)",
+                                            title2="Emission Matrix (With Transitions)"):
+    # Create the (row, column) coordinates for states
+    state_labels = [f"({i},{j})" for i in range(3) for j in range(3)]
+
+    fig, axs = plt.subplots(1, 2, figsize=(16, 6))
+
+    # Heatmap for emission1
+    sns.heatmap(emission1, annot=True, fmt=".2f", cmap="Blues", cbar=True,
+                xticklabels=[0, 1, 2], yticklabels=state_labels, ax=axs[0])
+    axs[0].set_title(title1)
+    axs[0].set_xlabel("Rewards")
+    axs[0].set_ylabel("States")
+
+    # Heatmap for emission2
+    sns.heatmap(emission2, annot=True, fmt=".2f", cmap="Blues", cbar=True,
+                xticklabels=[0, 1, 2], yticklabels=state_labels, ax=axs[1])
+    axs[1].set_title(title2)
+    axs[1].set_xlabel("Rewards")
+    axs[1].set_ylabel("States")
+
+    plt.tight_layout()
+    plt.show()
+
+
 
 without_model, without_prob = train_hmm_without_transitions(rewards_data)
 with_model, with_prob = train_hmm_with_transitions(rewards_data, true_transmat)
@@ -109,13 +132,9 @@ with_model, with_prob = train_hmm_with_transitions(rewards_data, true_transmat)
 learned_transmat = without_model.transmat_
 given_transmat = with_model.transmat_
 
+plot_emission_matrices_with_coordinates(without_prob, with_prob)
 plot_transition_comparison(learned_transmat, given_transmat)
 
-plot_transition_difference(learned_transmat, given_transmat, title="Difference in Transition Matrices")
-
-plot_emission_difference(without_prob, with_prob, title="Difference in Emission Matrices")
-
-# print("MSE: ", mean_squared_error(with_prob, without_prob))
 
 
 

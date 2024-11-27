@@ -1,13 +1,9 @@
-from matplotlib import pyplot as plt
 from sklearn.datasets import fetch_covtype
-from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
-import matplotlib.pyplot as plt
-import numpy as np
 
 
 # Task 6
@@ -17,6 +13,7 @@ def load_data():
     X = data.data
     y = data.target
     return X, y
+
 
 def split_data(X, y):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -33,8 +30,7 @@ def train_logistic_regression(X_train, y_train):
     model = LogisticRegression(random_state=42,
                                C = 0.464,
                                max_iter = 25,
-                               solver = 'newton-cg',
-                               verbose=1)
+                               solver = 'newton-cg')
     model.fit(X_train, y_train)
     return model
 
@@ -51,7 +47,7 @@ def train_decision_tree(X_train, y_train):
 
 
 # Task 9
-def random_search_forest(X_train, y_train):
+def train_random_forest(X_train, y_train):
     model = RandomForestClassifier(random_state=42,
                                       n_estimators=150,
                                       min_samples_leaf=3,
@@ -90,7 +86,7 @@ def main():
     print(" Decision Tree Test Set Accuracy:", tree_test)
 
     # Task 9
-    ensemble_model = random_search_forest(X_train, y_train)
+    ensemble_model = train_random_forest(X_train, y_train)
     ens_test = evaluate_test_model(ensemble_model, X_test, y_test)
     print("Ensemble Model Test Set Accuracy:", ens_test)
 

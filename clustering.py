@@ -31,7 +31,6 @@ def kmeans_clustering(X, n_clusters=7):
                     tol= 1e-4,
                     random_state=42).fit(X)
     cluster_assignments = kmeans.predict(X)
-    centroid_locations = kmeans.cluster_centers_
     return cluster_assignments
 
 
@@ -40,16 +39,14 @@ def gmm_clustering(X, K=7):
     gmm = GaussianMixture(n_components=K,
                           max_iter=100,
                           covariance_type="full",
-                          warm_start=True,
                           init_params='random',
-                          tol=1e-8).fit(X)
+                          tol=1e-4).fit(X)
     cluster_assignments = gmm.predict(X)
     return cluster_assignments
 
 
 # Task 4
-def random_baseline_clustering(X, K=7):
-    random_centroids = np.random.rand(K, X.shape[1]) * np.ptp(X, axis=0) + np.min(X, axis=0)
+def random_baseline(X, K=7):
     random_assignments = np.random.choice(K, size=X.shape[0], replace=True)
     return random_assignments
 
@@ -77,8 +74,6 @@ def perform_pca_and_normalize(X, n_components):
 
 
 def main():
-    print("Evaluating explained variance for PCA...")
-
     # Performing PCA
     n_components = 44
     X_pca_normalized, pca_model = perform_pca_and_normalize(X_subset, n_components)
@@ -97,7 +92,7 @@ def main():
     print("Error rate (%):", (gmm_errors / total_pairs) * 100)
 
     #Random
-    random_assignments = random_baseline_clustering(X_pca_normalized, 7)
+    random_assignments = random_baseline(X_pca_normalized, 7)
     random_errors , _ = count_errors(random_assignments, y_subset)
     print("Number of errors made by Random Baseline on PCA-reduced data:", random_errors)
     print("Error rate (%):", (random_errors / total_pairs) * 100)

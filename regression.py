@@ -23,10 +23,12 @@ def load_data(file_name):
     return x_data, y_data
 
 
-def scale_data(X_train, y_train):
+def scale_data(X_train, y_train, X_test, y_test):
     X_train = x_scaler.fit_transform(X_train)
     y_train = y_scaler.fit_transform(y_train)
-    return X_train, y_train
+    X_test = x_scaler.transform(X_test)
+    y_test = y_scaler.transform(y_test)
+    return X_train, y_train, X_test, y_test
 
 
 def descale(X_train, y_train, y_pred):
@@ -100,19 +102,13 @@ def train_bayesian_regression(X_train, y_train, y_scaler, num_samples=1000):
 
         noise = pm.Uniform("noise", lower=0, upper=200)
 
-        y_est = (
-            w0
-            + w1 * X_train
-            + w2 * X_train**2
-            + w3 * X_train**3
-        )
+        y_est = (w0 + w1 * X_train + w2 * X_train**2 + w3 * X_train**3)
         likelihood = pm.Normal("likelihood", mu=y_est, sigma=noise, observed=y_train)
 
         trace = pm.sample(draws=1250, tune=200, return_inferencedata=True)
 
     summary = az.summary(trace, var_names=["w0", "w1", "w2", "w3", "noise"])
     print(summary)
-
 
     return model, trace
 
