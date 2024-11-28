@@ -17,9 +17,8 @@ y_scaler = StandardScaler()
 
 def load_data(file_name):
     data = np.loadtxt(file_name)
-    x_data = data[:, 0].reshape(-1, 1)  # x values
-    y_data = data[:, 1].reshape(-1, 1)  # y values
-
+    x_data = data[:, 0].reshape(-1, 1)
+    y_data = data[:, 1].reshape(-1, 1)
     return x_data, y_data
 
 
@@ -192,8 +191,8 @@ def test_nn(model, X_train, y_train, X_test, y_test):
 
 def main():
     # Load and scale data
-    X_train, y_train = load_data("Data/regression_train.txt")
-    X_test, y_test = load_data("Data/regression_test.txt")
+    X_train, y_train = load_data("regression_train.txt")
+    X_test, y_test = load_data("regression_test.txt")
     X_train_orig, y_train_orig = X_train, y_train
     X_train, y_train, X_test, y_test = scale_data(X_train, y_train, X_test, y_test)
 

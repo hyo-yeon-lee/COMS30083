@@ -3,7 +3,7 @@ from hmmlearn import hmm
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-rewards_data = np.loadtxt('Data/rewards.txt', dtype=int).reshape(-1, 1)
+rewards_data = np.loadtxt('rewards.txt', dtype=int).reshape(-1, 1)
 n_states = 9
 n_rewards = 3
 

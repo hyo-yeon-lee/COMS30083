@@ -52,7 +52,7 @@ def random_baseline(X, K=7):
 
 
 # Task 5
-def count_errors(labels, y_true):
+def count_errors_pairs(labels, y_true):
     errors = 0
     total_pairs = 0
     for i, j in combinations(range(len(y_true)), 2):
@@ -80,20 +80,20 @@ def main():
 
     # K-means
     kmeans_assignments = kmeans_clustering(X_pca_normalized)
-    kmeans_errors, total_pairs = count_errors(kmeans_assignments, y_subset)
+    kmeans_errors, total_pairs = count_errors_pairs(kmeans_assignments, y_subset)
     print("Total number of pairs with the same class label:", total_pairs)
     print("Number of errors made by K-means on PCA-reduced data:", kmeans_errors)
     print("Error rate (%):", (kmeans_errors / total_pairs) * 100)
 
    #GMM
     gmm_assignments = gmm_clustering(X_pca_normalized)
-    gmm_errors, _ = count_errors(gmm_assignments, y_subset)
+    gmm_errors, _ = count_errors_pairs(gmm_assignments, y_subset)
     print("Number of errors made by GMM on PCA-reduced data:", gmm_errors)
     print("Error rate (%):", (gmm_errors / total_pairs) * 100)
 
     #Random
     random_assignments = random_baseline(X_pca_normalized, 7)
-    random_errors , _ = count_errors(random_assignments, y_subset)
+    random_errors , _ = count_errors_pairs(random_assignments, y_subset)
     print("Number of errors made by Random Baseline on PCA-reduced data:", random_errors)
     print("Error rate (%):", (random_errors / total_pairs) * 100)
 

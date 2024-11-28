@@ -83,7 +83,7 @@ def main():
     # Task 8
     tree_model = train_decision_tree(X_train, y_train)
     tree_test = evaluate_test_model(tree_model,X_test, y_test)
-    print(" Decision Tree Test Set Accuracy:", tree_test)
+    print("Decision Tree Test Set Accuracy:", tree_test)
 
     # Task 9
     ensemble_model = train_random_forest(X_train, y_train)
